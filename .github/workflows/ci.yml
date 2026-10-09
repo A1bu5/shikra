@@ -39,7 +39,17 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test (unit + encrypted e2e)
-        run: cargo test --workspace
+        run: |
+          set -o pipefail
+          if ! cargo test --workspace --no-fail-fast 2>&1 | tee /tmp/test.log; then
+            # Surface failing test names and compile errors as check-run
+            # annotations so failures are diagnosable without log access.
+            grep -E "^test .+ FAILED$" /tmp/test.log | sort -u | head -20 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+            grep -E "^error(\[[A-Z0-9]+\])?: " /tmp/test.log | head -10 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
 
   deny:
     runs-on: ubuntu-latest
@@ -101,7 +111,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build hardened Windows implant
         run: |
-          cargo build -p shikra-builder
+          cargo build -p shikra-builder -p shikra-server
           ./target/debug/shikra-server --bootstrap --state-dir ./state > /dev/null
           ./target/debug/shikra-builder --name ci-hardened --os windows --arch x86-64 \
             --mode beacon --http-url http://127.0.0.1:8080 \
