@@ -69,7 +69,7 @@ ed25519-dalek = { version = "2.2", default-features = false, features = [
     "rand_core",
     "zeroize",
 ] }
-x25519-dalek = { version = "2.0", features = ["static_secrets", "getrandom", "zeroize"] }
+x25519-dalek = { version = "3.0", features = ["static_secrets", "getrandom", "zeroize"] }
 chacha20poly1305 = "0.10"
 chacha20 = "0.9"
 aes = "0.8"
