@@ -187,6 +187,7 @@ jobs:
           output-file: shikra-${{ github.ref_name }}-sbom.spdx.json
           artifact-name: sbom
           upload-artifact: true
+          upload-release-assets: false
 
   release:
     name: Publish release
@@ -206,11 +207,33 @@ jobs:
       - name: Assert no implant or stager artifacts
         run: |
           set -euo pipefail
+          fail=0
+          # Filename-level check.
           if find dist -type f | grep -Eiq 'implant|stager'; then
             echo "::error::release artifacts must never contain implant or stager payloads"
             find dist -type f | grep -Ei 'implant|stager'
-            exit 1
+            fail=1
           fi
+          # Content-level check: inspect every archive.
+          while IFS= read -r archive; do
+            case "$archive" in
+              *.tar.gz)
+                if tar -tzf "$archive" | grep -Eiq 'implant|stager'; then
+                  echo "::error::implant/stager payload inside $archive"
+                  tar -tzf "$archive" | grep -Ei 'implant|stager'
+                  fail=1
+                fi
+                ;;
+              *.zip)
+                if unzip -l "$archive" | grep -Eiq 'implant|stager'; then
+                  echo "::error::implant/stager payload inside $archive"
+                  unzip -l "$archive" | grep -Ei 'implant|stager'
+                  fail=1
+                fi
+                ;;
+            esac
+          done < <(find dist -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \))
+          [ "$fail" -eq 0 ]
           archives=$(find dist -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) | wc -l)
           echo "archives: $archives"
           if [ "$archives" -lt 8 ]; then
