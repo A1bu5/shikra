@@ -14,10 +14,22 @@ async fn wait_for_session(
     client: &mut shikra_client::OperatorClient,
     timeout: Duration,
 ) -> anyhow::Result<shikra_proto::v1::SessionInfo> {
+    // Tests share one database and may run in parallel; sessions from
+    // earlier or finished tests linger until the reaper marks them dead.
+    // Ignore sessions first seen well before this test, so a stale session
+    // can never satisfy the wait and swallow the task we are about to send.
+    let cutoff =
+        prost_types::Timestamp::from(std::time::SystemTime::now() - Duration::from_secs(5));
     let deadline = tokio::time::Instant::now() + timeout;
     loop {
         let sessions = client.sessions().await?;
-        if let Some(session) = sessions.into_iter().next() {
+        let found = sessions.into_iter().find(|session| {
+            session
+                .first_seen
+                .as_ref()
+                .is_some_and(|seen| (seen.seconds, seen.nanos) >= (cutoff.seconds, cutoff.nanos))
+        });
+        if let Some(session) = found {
             return Ok(session);
         }
         if tokio::time::Instant::now() >= deadline {

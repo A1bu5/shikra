@@ -2681,6 +2681,7 @@ dependencies = [
  "clap",
  "hex",
  "prost",
+ "prost-types",
  "quick-xml",
  "quinn",
  "reqwest",
