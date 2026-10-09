@@ -21,11 +21,16 @@ allow = [
     "CC0-1.0",
     "OpenSSL",
     "GPL-3.0-only",
+    # Mozilla CA bundle data license (webpki-roots).
+    "CDLA-Permissive-2.0",
 ]
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Internal crates are path-only workspace dependencies with no registry
+# version requirement; they are not crates.io wildcards.
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"

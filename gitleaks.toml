@@ -1,0 +1,14 @@
+# Gitleaks configuration for the Shikra repository.
+#
+# The default rule set is extended (not replaced). The allowlist below only
+# covers deterministic test fixtures; real credentials are never allowlisted.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deterministic test fixtures (not real secrets)"
+regexes = [
+    # XOR key used by the staged-delivery end-to-end test.
+    '''00112233445566778899aabbccddeeff''',
+]

@@ -57,6 +57,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: ${{ github.workspace }}/gitleaks.toml
 
   cross:
     runs-on: ubuntu-latest
@@ -66,6 +67,9 @@ jobs:
         target:
           - x86_64-pc-windows-gnu
           - x86_64-unknown-linux-musl
+    env:
+      # ring (via rustls) needs a musl C toolchain for the musl target.
+      CC_x86_64_unknown_linux_musl: musl-gcc
     steps:
       - uses: actions/checkout@v7
       - name: Install toolchain
@@ -75,6 +79,9 @@ jobs:
       - name: Install mingw linker
         if: matrix.target == 'x86_64-pc-windows-gnu'
         run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+      - name: Install musl toolchain
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - uses: Swatinem/rust-cache@v2
       - name: Check implant for target
         run: cargo check -p shikra-implant --target ${{ matrix.target }}
@@ -95,10 +102,7 @@ jobs:
       - name: Build hardened Windows implant
         run: |
           cargo build -p shikra-builder
-          mkdir -p state
-          SHIKRA_DATABASE_URL=postgres://unused \
-            SHIKRA_STATE_DIR=./state \
-            timeout 10 ./target/debug/shikra-server || true
+          ./target/debug/shikra-server --bootstrap --state-dir ./state > /dev/null
           ./target/debug/shikra-builder --name ci-hardened --os windows --arch x86-64 \
             --mode beacon --http-url http://127.0.0.1:8080 \
             --enroll-token "$(cat state/enroll.token)" \

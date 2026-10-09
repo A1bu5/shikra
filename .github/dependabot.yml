@@ -21,11 +21,27 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    # Only the GUI's own direct dependencies. Shared crypto/transport crates
+    # resolve through the root workspace so versions stay aligned; bumping
+    # them from here produced breaking major updates to the root manifest.
+    allow:
+      - dependency-name: "tauri"
+      - dependency-name: "tauri-plugin-dialog"
+      - dependency-name: "postgresql_embedded"
+      - dependency-name: "sqlx"
+      - dependency-name: "serde"
+      - dependency-name: "serde_json"
+      - dependency-name: "base64"
+      - dependency-name: "tokio"
+      - dependency-name: "prost-types"
     groups:
       gui-minor:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
@@ -35,3 +51,7 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    ignore:
+      # The version tag pins the Rust toolchain (MSRV); bump it deliberately
+      # in lockstep with rust-toolchain.toml.
+      - dependency-name: "dtolnay/rust-toolchain"
