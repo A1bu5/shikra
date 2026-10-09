@@ -39,6 +39,16 @@ async fn wait_for_session(
     }
 }
 
+fn first_seen_after(
+    session: &shikra_proto::v1::SessionInfo,
+    mark: &prost_types::Timestamp,
+) -> bool {
+    session
+        .first_seen
+        .as_ref()
+        .is_some_and(|seen| (seen.seconds, seen.nanos) >= (mark.seconds, mark.nanos))
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn encrypted_end_to_end_communication() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
@@ -952,6 +962,7 @@ async fn tcp_pivot_downstream_agent() -> anyhow::Result<()> {
     assert!(status.running, "pivot failed to start: {}", status.message);
 
     // Downstream agent connects through the pivot (no direct route to server).
+    let downstream_mark = prost_types::Timestamp::from(std::time::SystemTime::now());
     let downstream_task = tokio::spawn(run_agent(AgentConfig {
         endpoint: format!("https://127.0.0.1:{pivot_port}"),
         ca_pem,
@@ -970,7 +981,9 @@ async fn tcp_pivot_downstream_agent() -> anyhow::Result<()> {
         let sessions = client.sessions().await?;
         let downstream = sessions
             .iter()
-            .find(|session| session.id != upstream.id)
+            .find(|session| {
+                session.id != upstream.id && first_seen_after(session, &downstream_mark)
+            })
             .cloned();
         if let Some(session) = downstream {
             break session;
@@ -1089,6 +1102,7 @@ async fn multi_hop_pivot_chain_and_portscan() -> anyhow::Result<()> {
     assert!(fwd1.running, "hop1 pivot failed: {}", fwd1.message);
 
     // Hop 2: an agent that only reaches the teamserver through hop 1.
+    let hop2_mark = prost_types::Timestamp::from(std::time::SystemTime::now());
     let hop2 = tokio::spawn(run_agent(AgentConfig {
         endpoint: format!("https://127.0.0.1:{hop1_port}"),
         ca_pem: ca_pem.clone(),
@@ -1104,7 +1118,11 @@ async fn multi_hop_pivot_chain_and_portscan() -> anyhow::Result<()> {
     let session2 = loop {
         tokio::time::sleep(Duration::from_millis(300)).await;
         let sessions = client.sessions().await?;
-        if let Some(found) = sessions.iter().find(|s| s.id != session1.id).cloned() {
+        if let Some(found) = sessions
+            .iter()
+            .find(|s| s.id != session1.id && first_seen_after(s, &hop2_mark))
+            .cloned()
+        {
             break found;
         }
         if tokio::time::Instant::now() >= deadline {
@@ -1127,6 +1145,7 @@ async fn multi_hop_pivot_chain_and_portscan() -> anyhow::Result<()> {
     assert!(fwd2.running, "hop2 pivot failed: {}", fwd2.message);
 
     // Hop 3: an agent whose C2 path is hop3 -> hop2 -> hop1 -> teamserver.
+    let hop3_mark = prost_types::Timestamp::from(std::time::SystemTime::now());
     let hop3 = tokio::spawn(run_agent(AgentConfig {
         endpoint: format!("https://127.0.0.1:{hop2_port}"),
         ca_pem,
@@ -1144,7 +1163,7 @@ async fn multi_hop_pivot_chain_and_portscan() -> anyhow::Result<()> {
         let sessions = client.sessions().await?;
         if let Some(found) = sessions
             .iter()
-            .find(|s| s.id != session1.id && s.id != session2.id)
+            .find(|s| s.id != session1.id && s.id != session2.id && first_seen_after(s, &hop3_mark))
             .cloned()
         {
             break found;
@@ -2388,6 +2407,7 @@ async fn smb_pipe_lateral_child_checks_in_through_parent() -> anyhow::Result<()>
         jitter_secs: 0,
         max_runtime_secs: Some(90),
     };
+    let child_mark = prost_types::Timestamp::from(std::time::SystemTime::now());
     let child_task = tokio::spawn(shikra_implant::run_agent_piped(
         child_config,
         Some(socket_path.clone()),
@@ -2400,7 +2420,11 @@ async fn smb_pipe_lateral_child_checks_in_through_parent() -> anyhow::Result<()>
         let sessions = client.sessions().await?;
         if let Some(found) = sessions
             .iter()
-            .find(|session| session.id != parent.id && session.status == 1)
+            .find(|session| {
+                session.id != parent.id
+                    && session.status == 1
+                    && first_seen_after(session, &child_mark)
+            })
             .cloned()
         {
             child = Some(found);

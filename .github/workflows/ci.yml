@@ -41,7 +41,7 @@ jobs:
       - name: Test (unit + encrypted e2e)
         run: |
           set -o pipefail
-          if cargo test --workspace --no-fail-fast > /tmp/test.log 2>&1; then
+          if cargo test --workspace --no-fail-fast -- --test-threads=1 > /tmp/test.log 2>&1; then
             exit 0
           fi
           # Surface failing test names, panics and the tail of the log as
