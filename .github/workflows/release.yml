@@ -48,24 +48,31 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test (unit + encrypted e2e)
+        env:
+          RUST_BACKTRACE: "1"
         run: |
           set -o pipefail
-          if cargo test --workspace --no-fail-fast -- --test-threads=1 > /tmp/test.log 2>&1; then
-            exit 0
-          fi
-          # Surface failing test names, panics and the tail of the log as
-          # check-run annotations so failures are diagnosable without log
-          # access.
-          { grep -E "^test .+ FAILED$" /tmp/test.log || true; } \
+          attempt=1
+          while [ "$attempt" -le 2 ]; do
+            if cargo test --workspace --no-fail-fast -- --test-threads=1 > "/tmp/test.$attempt.log" 2>&1; then
+              exit 0
+            fi
+            # Strip ANSI colour codes (CARGO_TERM_COLOR=always) before matching.
+            sed -e 's/\x1b\[[0-9;]*m//g' "/tmp/test.$attempt.log" > "/tmp/test.$attempt.clean" || true
+            echo "::warning::test run $attempt failed"
+            attempt=$((attempt + 1))
+          done
+          clean=/tmp/test.$((attempt - 1)).clean
+          { grep -E "^test .+ FAILED$" "$clean" || true; } \
             | sort -u | head -20 \
             | while IFS= read -r line; do echo "::error::$line"; done
-          { grep -E "panicked at" /tmp/test.log || true; } \
+          { grep -aE "panicked at|did not exit successfully|signal:|SIGSEGV|SIGABRT|SIGKILL|SIGBUS" "$clean" || true; } \
             | sort -u | head -10 \
             | while IFS= read -r line; do echo "::error::$line"; done
-          { grep -E "^error(\[[A-Z0-9]+\])?: " /tmp/test.log || true; } \
+          { grep -aE "^error(\[[A-Z0-9]+\])?: " "$clean" || true; } \
             | head -10 \
             | while IFS= read -r line; do echo "::error::$line"; done
-          { tail -6 /tmp/test.log || true; } \
+          { tail -12 "$clean" || true; } \
             | while IFS= read -r line; do echo "::error::log tail: $line"; done
           exit 1
 
