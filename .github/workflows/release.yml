@@ -1,0 +1,255 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Gate: a tagged commit must pass the same checks as CI before anything is
+  # built or published.
+  verify:
+    name: Verify tag commit
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: shikra
+          POSTGRES_PASSWORD: shikra
+          POSTGRES_DB: shikra_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U shikra"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SHIKRA_TEST_DATABASE_URL: postgres://shikra:shikra@localhost:5432/shikra_test
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test (unit + encrypted e2e)
+        run: cargo test --workspace
+
+  # Operator CLI binaries: server, client and builder. Implants are never
+  # built or shipped by this workflow.
+  cli:
+    name: CLI (${{ matrix.label }})
+    needs: verify
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux-x86_64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - label: macos-aarch64
+            runner: macos-14
+            target: aarch64-apple-darwin
+          - label: macos-x86_64
+            runner: macos-14
+            target: x86_64-apple-darwin
+          - label: windows-x86_64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build operator tooling
+        run: >-
+          cargo build --release --locked --target ${{ matrix.target }}
+          -p shikra-server -p shikra-client -p shikra-builder
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pack
+          cd "target/${{ matrix.target }}/release"
+          tar -czf "$GITHUB_WORKSPACE/pack/shikra-${{ github.ref_name }}-${{ matrix.label }}.tar.gz" \
+            shikra-server shikra-client shikra-builder
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path pack | Out-Null
+          $root = "target/${{ matrix.target }}/release"
+          Compress-Archive -Path "$root/shikra-server.exe","$root/shikra-client.exe","$root/shikra-builder.exe" `
+            -DestinationPath "pack/shikra-${{ github.ref_name }}-${{ matrix.label }}.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cli-${{ matrix.label }}
+          path: pack/*
+          if-no-files-found: error
+
+  # Visual operator console (Tauri 2). Shipped as a raw binary per platform;
+  # signed installers (dmg/msi/AppImage) are produced locally for now.
+  gui:
+    name: GUI (${{ matrix.label }})
+    needs: verify
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux-x86_64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - label: macos-aarch64
+            runner: macos-14
+            target: aarch64-apple-darwin
+          - label: macos-x86_64
+            runner: macos-14
+            target: x86_64-apple-darwin
+          - label: windows-x86_64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Tauri system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libgtk-3-dev
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gui
+      - name: Build console
+        working-directory: gui
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: gui
+        run: |
+          set -euo pipefail
+          mkdir -p ../pack
+          cd "target/${{ matrix.target }}/release"
+          tar -czf "$GITHUB_WORKSPACE/pack/shikra-console-${{ github.ref_name }}-${{ matrix.label }}.tar.gz" \
+            shikra-console
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: gui
+        run: |
+          New-Item -ItemType Directory -Force -Path ../pack | Out-Null
+          Compress-Archive -Path "target/${{ matrix.target }}/release/shikra-console.exe" `
+            -DestinationPath "../pack/shikra-console-${{ github.ref_name }}-${{ matrix.label }}.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gui-${{ matrix.label }}
+          path: pack/*
+          if-no-files-found: error
+
+  # SPDX SBOM of the source tree and dependency graph (Cargo.lock).
+  sbom:
+    name: SBOM
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: shikra-${{ github.ref_name }}-sbom.spdx.json
+          artifact-name: sbom
+          upload-artifact: true
+
+  release:
+    name: Publish release
+    needs: [cli, gui, sbom]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Assert no implant or stager artifacts
+        run: |
+          set -euo pipefail
+          if find dist -type f | grep -Eiq 'implant|stager'; then
+            echo "::error::release artifacts must never contain implant or stager payloads"
+            find dist -type f | grep -Ei 'implant|stager'
+            exit 1
+          fi
+          archives=$(find dist -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) | wc -l)
+          echo "archives: $archives"
+          if [ "$archives" -lt 8 ]; then
+            echo "::error::expected at least 8 archives (4 CLI + 4 GUI), found $archives"
+            exit 1
+          fi
+      - name: Generate checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          find . -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print0 \
+            | sort -z | xargs -0 sha256sum > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          cat SHA256SUMS
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+      - name: Extract release notes from CHANGELOG
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "::error::CHANGELOG.md has no entry for $GITHUB_REF_NAME"
+            exit 1
+          fi
+          cat RELEASE_NOTES.md
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: dist/*
+          fail_on_unmatched_files: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

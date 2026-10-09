@@ -55,5 +55,5 @@ Initial public release.
 - Beacon task results are kept encrypted in memory between polls.
 - Enrollment is rate limited per peer and authentication failures are audited.
 
-[Unreleased]: https://github.com/OWNER/shikra/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OWNER/shikra/releases/tag/v0.1.0
+[Unreleased]: https://github.com/A1bu5/shikra/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/A1bu5/shikra/releases/tag/v0.1.0

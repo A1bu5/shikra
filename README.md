@@ -1,6 +1,6 @@
 # Shikra
 
-[![CI](https://github.com/OWNER/shikra/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/shikra/actions/workflows/ci.yml)
+[![CI](https://github.com/A1bu5/shikra/actions/workflows/ci.yml/badge.svg)](https://github.com/A1bu5/shikra/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 A cross-platform command-and-control framework written in native Rust, with a
