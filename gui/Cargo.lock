@@ -4404,7 +4404,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.1",
  "clap",
  "serde",
  "serde_json",
@@ -4426,7 +4426,7 @@ dependencies = [
 name = "shikra-console"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "postgresql_embedded",
  "prost-types",
  "serde",
@@ -4487,7 +4487,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base32",
- "base64 0.22.1",
+ "base64 0.23.1",
  "boringtun",
  "hex",
  "prost",
