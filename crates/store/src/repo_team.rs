@@ -298,6 +298,13 @@ pub fn compute_audit_hash(
     details: &serde_json::Value,
     recorded_at: OffsetDateTime,
 ) -> Vec<u8> {
+    // PostgreSQL `timestamptz` (and the sqlx encoder) store microseconds;
+    // truncate the sub-microsecond component before hashing so the chain
+    // verifies after a DB round-trip on clocks that report true nanosecond
+    // precision (e.g. Linux).
+    let recorded_at = recorded_at
+        .replace_nanosecond(recorded_at.nanosecond() / 1_000 * 1_000)
+        .expect("nanosecond component is always in range");
     let mut hasher = Sha256::new();
     if let Some(prev) = prev_hash {
         hasher.update(prev);
@@ -432,5 +439,31 @@ mod tests {
 
         let tampered = compute_audit_hash(None, "mallory", "login", Some("server"), &details, now);
         assert_ne!(first, tampered, "actor change must alter the hash");
+    }
+
+    #[test]
+    fn audit_hash_aligns_timestamps_to_microseconds() {
+        // PostgreSQL `timestamptz` stores microseconds; the hash must ignore
+        // sub-microsecond digits so the chain verifies after a DB round-trip
+        // on clocks reporting true nanosecond precision.
+        let with_nanos = OffsetDateTime::from_unix_timestamp_nanos(1_700_000_000_123_456_789)
+            .expect("valid timestamp");
+        let db_round_trip = OffsetDateTime::from_unix_timestamp_nanos(1_700_000_000_123_456_000)
+            .expect("valid timestamp");
+        assert_ne!(with_nanos, db_round_trip, "fixture must differ in nanos");
+
+        let details = serde_json::json!({"action": "test"});
+        assert_eq!(
+            compute_audit_hash(None, "alice", "login", Some("server"), &details, with_nanos),
+            compute_audit_hash(
+                None,
+                "alice",
+                "login",
+                Some("server"),
+                &details,
+                db_round_trip
+            ),
+            "hash must be stable across a PostgreSQL microsecond round-trip"
+        );
     }
 }
