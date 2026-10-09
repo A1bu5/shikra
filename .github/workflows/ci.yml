@@ -133,6 +133,10 @@ jobs:
 
   gui:
     runs-on: ubuntu-latest
+    env:
+      # postgresql_embedded's bundled build script fetches a PostgreSQL
+      # archive from GitHub; authenticate to avoid anonymous rate limits.
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
       - name: Install Tauri system dependencies
