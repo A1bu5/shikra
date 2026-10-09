@@ -60,8 +60,11 @@ mod imp {
             unsafe extern "system" fn(usize, u32, *mut c_void, u32, *mut u32) -> i32;
         unsafe {
             let advapi = shikra_evasion::windows::load_library("advapi32.dll")?;
-            let open = shikra_evasion::windows::export_address(advapi, "OpenProcessToken")
-                .ok_or("OpenProcessToken export missing")?;
+            let open = shikra_evasion::windows::export_address(
+                advapi,
+                &shikra_obf::obf!("OpenProcessToken"),
+            )
+            .ok_or_else(|| shikra_obf::obf!("OpenProcessToken export missing"))?;
             let info = shikra_evasion::windows::export_address(advapi, "GetTokenInformation")
                 .ok_or("GetTokenInformation export missing")?;
             let open: OpenProcessTokenFn = std::mem::transmute(open);
@@ -70,7 +73,7 @@ mod imp {
             let mut token = 0usize;
             // TOKEN_QUERY = 0x0008
             if open(usize::MAX, 0x0008, &mut token) == 0 || token == 0 {
-                return Err("OpenProcessToken failed".into());
+                return Err(shikra_obf::obf!("OpenProcessToken failed"));
             }
             let mut buffer = [0u8; 128];
             let mut returned = 0u32;

