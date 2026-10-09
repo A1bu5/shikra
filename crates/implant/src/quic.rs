@@ -7,6 +7,7 @@ use crate::{execute_task, AgentState};
 use anyhow::{Context, Result};
 use prost::Message;
 use quinn::{ClientConfig, Endpoint};
+use rustls_pki_types::pem::PemObject;
 use shikra_crypto::channel::SessionKeys;
 use shikra_crypto::kex::KeyPair;
 use shikra_crypto::signing::{verify, Identity};
@@ -37,7 +38,7 @@ pub struct QuicConfig {
 
 fn client_endpoint(ca_pem: &str) -> Result<Endpoint> {
     let mut roots = rustls::RootCertStore::empty();
-    for cert in rustls_pemfile::certs(&mut ca_pem.as_bytes()) {
+    for cert in rustls_pki_types::CertificateDer::pem_slice_iter(ca_pem.as_bytes()) {
         roots
             .add(cert.context("invalid CA certificate")?)
             .context("failed to add CA certificate")?;

@@ -8,6 +8,8 @@ use crate::state::ServerState;
 use anyhow::{Context, Result};
 use prost::Message;
 use quinn::{Endpoint, ServerConfig};
+use rustls_pki_types::pem::PemObject;
+use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 use shikra_proto::v1::{CheckInRequest, CheckInResponse, Envelope};
 use std::sync::Arc;
 
@@ -21,12 +23,11 @@ pub fn server_endpoint(
     key_pem: &str,
     addr: std::net::SocketAddr,
 ) -> Result<Endpoint> {
-    let certs: Vec<_> = rustls_pemfile::certs(&mut cert_pem.as_bytes())
+    let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_slice_iter(cert_pem.as_bytes())
         .collect::<std::result::Result<Vec<_>, _>>()
         .context("failed to parse server certificate")?;
-    let key = rustls_pemfile::private_key(&mut key_pem.as_bytes())
-        .context("failed to parse server key")?
-        .context("server key is empty")?;
+    let key =
+        PrivateKeyDer::from_pem_slice(key_pem.as_bytes()).context("failed to parse server key")?;
     let mut tls = rustls::ServerConfig::builder()
         .with_no_client_auth()
         .with_single_cert(certs, key)

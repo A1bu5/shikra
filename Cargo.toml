@@ -7,6 +7,9 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.88"
 license = "GPL-3.0-only"
+# Never published to crates.io; internal path dependencies carry no registry
+# version requirement.
+publish = false
 
 [workspace.dependencies]
 # Internal crates
@@ -99,7 +102,7 @@ wat = "1"
 # QUIC transport
 quinn = { version = "0.11", default-features = false, features = ["runtime-tokio", "rustls-ring", "log"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "logging"] }
-rustls-pemfile = "2"
+rustls-pki-types = { version = "1", default-features = false, features = ["alloc"] }
 
 # Build pipeline
 tempfile = "3"
