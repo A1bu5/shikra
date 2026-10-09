@@ -288,9 +288,6 @@ impl Drop for ExecutableMemory {
     }
 }
 
-type BeaconOutputFn = unsafe extern "C" fn(i32, *const u8, i32);
-type BeaconPrintfFn = unsafe extern "C" fn(i32, *const u8);
-
 unsafe extern "C" fn beacon_output(_ty: i32, data: *const u8, len: i32) {
     if data.is_null() || len <= 0 {
         return;
@@ -712,32 +709,89 @@ unsafe extern "C" fn beacon_revert_token() -> i32 {
     }
 }
 
+/// amd64 BOFs use the Microsoft x64 calling convention on every host OS.
+/// On non-Windows x86-64 hosts the host functions above are compiled with
+/// the System V ABI, so BOF import slots must point at these win64 shims.
+#[cfg(all(target_arch = "x86_64", not(target_os = "windows")))]
+mod win64_api {
+    use super::*;
+
+    macro_rules! shims {
+        ($( $name:ident ( $($arg:ident : $ty:ty),* $(,)? ) -> $ret:ty ; )*) => {$(
+            pub(super) unsafe extern "win64" fn $name($($arg: $ty),*) -> $ret {
+                unsafe { super::$name($($arg),*) }
+            }
+        )*};
+    }
+
+    shims! {
+        beacon_output(_ty: i32, data: *const u8, len: i32) -> ();
+        beacon_printf(_ty: i32, fmt: *const u8) -> ();
+        beacon_data_parse(parser: *mut BeaconDataParser, buffer: *mut u8, size: i32) -> ();
+        beacon_data_length(parser: *mut BeaconDataParser) -> i32;
+        beacon_data_int(parser: *mut BeaconDataParser) -> i32;
+        beacon_data_short(parser: *mut BeaconDataParser) -> i16;
+        beacon_data_extract(parser: *mut BeaconDataParser, out_size: *mut i32) -> *mut u8;
+        beacon_is_admin() -> i32;
+        beacon_format_alloc(format: *mut BeaconFormat, size: i32) -> ();
+        beacon_format_reset(format: *mut BeaconFormat) -> ();
+        beacon_format_free(format: *mut BeaconFormat) -> ();
+        beacon_format_append(format: *mut BeaconFormat, data: *const u8, length: i32) -> i32;
+        beacon_format_printf(format: *mut BeaconFormat, fmt: *const u8) -> ();
+        beacon_format_int(format: *mut BeaconFormat, value: i32) -> ();
+        beacon_format_short(format: *mut BeaconFormat, value: i16) -> ();
+        beacon_format_tostring(format: *mut BeaconFormat, out_size: *mut i32) -> *mut u8;
+        beacon_format_length(format: *mut BeaconFormat) -> i32;
+        beacon_to_wide_char(dest: *mut u16, src: *const u8, max: i32) -> i32;
+        beacon_add_value(key: *const u8, data: *mut std::ffi::c_void) -> i32;
+        beacon_get_value(key: *const u8) -> *mut std::ffi::c_void;
+        beacon_remove_value(key: *const u8) -> i32;
+        beacon_get_spawn_to(_arch: i32, buffer: *mut u8, length: i32) -> i32;
+        beacon_use_token(token: usize) -> i32;
+        beacon_revert_token() -> i32;
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", not(target_os = "windows")))]
+macro_rules! host_fn_ptr {
+    ($name:ident) => {
+        win64_api::$name as usize
+    };
+}
+
+#[cfg(not(all(target_arch = "x86_64", not(target_os = "windows"))))]
+macro_rules! host_fn_ptr {
+    ($name:ident) => {
+        $name as usize
+    };
+}
+
 fn host_function(name: &str) -> Option<usize> {
     Some(match name {
-        "BeaconOutput" => beacon_output as BeaconOutputFn as usize,
-        "BeaconPrintf" => beacon_printf as BeaconPrintfFn as usize,
-        "BeaconDataParse" => beacon_data_parse as usize,
-        "BeaconDataLength" => beacon_data_length as usize,
-        "BeaconDataInt" => beacon_data_int as usize,
-        "BeaconDataShort" => beacon_data_short as usize,
-        "BeaconDataExtract" => beacon_data_extract as usize,
-        "BeaconIsAdmin" => beacon_is_admin as usize,
-        "BeaconFormatAlloc" => beacon_format_alloc as usize,
-        "BeaconFormatReset" => beacon_format_reset as usize,
-        "BeaconFormatFree" => beacon_format_free as usize,
-        "BeaconFormatAppend" => beacon_format_append as usize,
-        "BeaconFormatPrintf" => beacon_format_printf as usize,
-        "BeaconFormatInt" => beacon_format_int as usize,
-        "BeaconFormatShort" => beacon_format_short as usize,
-        "BeaconFormatToString" => beacon_format_tostring as usize,
-        "BeaconFormatLength" => beacon_format_length as usize,
-        "toWideChar" => beacon_to_wide_char as usize,
-        "BeaconAddValue" => beacon_add_value as usize,
-        "BeaconGetValue" => beacon_get_value as usize,
-        "BeaconRemoveValue" => beacon_remove_value as usize,
-        "BeaconGetSpawnTo" => beacon_get_spawn_to as usize,
-        "BeaconUseToken" => beacon_use_token as usize,
-        "BeaconRevertToken" => beacon_revert_token as usize,
+        "BeaconOutput" => host_fn_ptr!(beacon_output),
+        "BeaconPrintf" => host_fn_ptr!(beacon_printf),
+        "BeaconDataParse" => host_fn_ptr!(beacon_data_parse),
+        "BeaconDataLength" => host_fn_ptr!(beacon_data_length),
+        "BeaconDataInt" => host_fn_ptr!(beacon_data_int),
+        "BeaconDataShort" => host_fn_ptr!(beacon_data_short),
+        "BeaconDataExtract" => host_fn_ptr!(beacon_data_extract),
+        "BeaconIsAdmin" => host_fn_ptr!(beacon_is_admin),
+        "BeaconFormatAlloc" => host_fn_ptr!(beacon_format_alloc),
+        "BeaconFormatReset" => host_fn_ptr!(beacon_format_reset),
+        "BeaconFormatFree" => host_fn_ptr!(beacon_format_free),
+        "BeaconFormatAppend" => host_fn_ptr!(beacon_format_append),
+        "BeaconFormatPrintf" => host_fn_ptr!(beacon_format_printf),
+        "BeaconFormatInt" => host_fn_ptr!(beacon_format_int),
+        "BeaconFormatShort" => host_fn_ptr!(beacon_format_short),
+        "BeaconFormatToString" => host_fn_ptr!(beacon_format_tostring),
+        "BeaconFormatLength" => host_fn_ptr!(beacon_format_length),
+        "toWideChar" => host_fn_ptr!(beacon_to_wide_char),
+        "BeaconAddValue" => host_fn_ptr!(beacon_add_value),
+        "BeaconGetValue" => host_fn_ptr!(beacon_get_value),
+        "BeaconRemoveValue" => host_fn_ptr!(beacon_remove_value),
+        "BeaconGetSpawnTo" => host_fn_ptr!(beacon_get_spawn_to),
+        "BeaconUseToken" => host_fn_ptr!(beacon_use_token),
+        "BeaconRevertToken" => host_fn_ptr!(beacon_revert_token),
         _ => return None,
     })
 }
@@ -871,6 +925,11 @@ pub fn execute(bof_bytes: &[u8], args: &[u8]) -> Result<BofOutcome, String> {
 
     BEACON_OUTPUT.with(|output| output.borrow_mut().clear());
 
+    // Windows amd64 BOFs use the Microsoft x64 calling convention on all
+    // hosts; arm64 fixtures use the standard C ABI.
+    #[cfg(all(target_arch = "x86_64", not(target_os = "windows")))]
+    type BofEntry = unsafe extern "win64" fn(*const u8, i32);
+    #[cfg(not(all(target_arch = "x86_64", not(target_os = "windows"))))]
     type BofEntry = unsafe extern "C" fn(*const u8, i32);
     let entry: BofEntry = unsafe { std::mem::transmute(entry) };
     unsafe { entry(args.as_ptr(), args.len() as i32) };
