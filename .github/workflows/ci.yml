@@ -41,15 +41,24 @@ jobs:
       - name: Test (unit + encrypted e2e)
         run: |
           set -o pipefail
-          if ! cargo test --workspace --no-fail-fast 2>&1 | tee /tmp/test.log; then
-            # Surface failing test names and compile errors as check-run
-            # annotations so failures are diagnosable without log access.
-            grep -E "^test .+ FAILED$" /tmp/test.log | sort -u | head -20 \
-              | while IFS= read -r line; do echo "::error::$line"; done
-            grep -E "^error(\[[A-Z0-9]+\])?: " /tmp/test.log | head -10 \
-              | while IFS= read -r line; do echo "::error::$line"; done
-            exit 1
+          if cargo test --workspace --no-fail-fast > /tmp/test.log 2>&1; then
+            exit 0
           fi
+          # Surface failing test names, panics and the tail of the log as
+          # check-run annotations so failures are diagnosable without log
+          # access.
+          { grep -E "^test .+ FAILED$" /tmp/test.log || true; } \
+            | sort -u | head -20 \
+            | while IFS= read -r line; do echo "::error::$line"; done
+          { grep -E "panicked at" /tmp/test.log || true; } \
+            | sort -u | head -10 \
+            | while IFS= read -r line; do echo "::error::$line"; done
+          { grep -E "^error(\[[A-Z0-9]+\])?: " /tmp/test.log || true; } \
+            | head -10 \
+            | while IFS= read -r line; do echo "::error::$line"; done
+          { tail -6 /tmp/test.log || true; } \
+            | while IFS= read -r line; do echo "::error::log tail: $line"; done
+          exit 1
 
   deny:
     runs-on: ubuntu-latest
