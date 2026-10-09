@@ -15,17 +15,17 @@ async fn wait_for_session(
     timeout: Duration,
 ) -> anyhow::Result<shikra_proto::v1::SessionInfo> {
     // Tests share one database and may run in parallel; sessions from
-    // earlier or finished tests linger until the reaper marks them dead.
-    // Ignore sessions first seen well before this test, so a stale session
-    // can never satisfy the wait and swallow the task we are about to send.
-    let cutoff =
-        prost_types::Timestamp::from(std::time::SystemTime::now() - Duration::from_secs(5));
+    // earlier or finished tests linger as non-dead until the reaper catches
+    // up. Accept only sessions that checked in within the last few seconds
+    // so a stale session can never swallow a task we submit.
     let deadline = tokio::time::Instant::now() + timeout;
     loop {
+        let cutoff =
+            prost_types::Timestamp::from(std::time::SystemTime::now() - Duration::from_secs(10));
         let sessions = client.sessions().await?;
         let found = sessions.into_iter().find(|session| {
             session
-                .first_seen
+                .last_seen
                 .as_ref()
                 .is_some_and(|seen| (seen.seconds, seen.nanos) >= (cutoff.seconds, cutoff.nanos))
         });
