@@ -3,7 +3,7 @@ name = "shikra-console"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.88"
-license = "Apache-2.0"
+license = "GPL-3.0-only"
 description = "Shikra C2 visual operator console (Tauri 2)"
 
 [workspace]

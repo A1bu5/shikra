@@ -1,7 +1,7 @@
 # Shikra
 
 [![CI](https://github.com/A1bu5/shikra/actions/workflows/ci.yml/badge.svg)](https://github.com/A1bu5/shikra/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 A cross-platform command-and-control framework written in native Rust, with a
 Tauri operator console and a model-driven AI copilot. Shikra is a clean-room
@@ -183,9 +183,9 @@ rate limiting).
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](LICENSE). Third-party
-components are used under their own licenses (see `Cargo.lock` and
-`deny.toml`).
+Licensed under the [GNU General Public License v3.0](LICENSE) (GPL-3.0).
+Third-party components are used under their own licenses (see `Cargo.lock`
+and `deny.toml`).
 
 Shikra is a clean-room implementation and contains no code from Sliver,
 Havoc, Metasploit, Cobalt Strike, or any other C2 framework (see `NOTICE`).

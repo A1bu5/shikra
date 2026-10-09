@@ -55,7 +55,7 @@ real server + agent pair.
 ### Developer Certificate of Origin
 
 By signing off a commit you certify that you wrote the contribution, or have
-the right to submit it under the project license (Apache-2.0). The full text
+the right to submit it under the project license (GPL-3.0). The full text
 is at https://developercertificate.org/.
 
 ```

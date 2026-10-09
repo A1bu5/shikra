@@ -11,7 +11,7 @@ public repository (archived read-only in February 2026).
 | --- | --- | --- | --- |
 | First release | 2026 | 2019 | 2022 |
 | Primary language | Rust (whole stack) | Go (whole stack) | Go teamserver, C++/Qt client, C/ASM agent |
-| License | Apache-2.0 | GPLv3 | GPL-3.0 |
+| License | GPL-3.0 | GPLv3 | GPL-3.0 |
 | Design stance | Clean-room, Rust-native, database-backed, AI-native | Mature general-purpose adversary emulation | Windows-focused evasion-forward post-exploitation |
 | Status | Active development | Actively maintained | **Archived** (read-only since Feb 2026) |
 | Codebase size | ~29k lines Rust + ~8k Tauri UI | ~247k lines Go (server/client/implant, no vendor) | Smaller; agent plus teamserver |
