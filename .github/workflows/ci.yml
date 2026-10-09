@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@1.88.0
+        uses: dtolnay/rust-toolchain@1.120.0
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
@@ -69,7 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@1.88.0
+        uses: dtolnay/rust-toolchain@1.120.0
         with:
           targets: ${{ matrix.target }}
       - name: Install mingw linker
@@ -86,7 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@1.88.0
+        uses: dtolnay/rust-toolchain@1.120.0
         with:
           targets: x86_64-pc-windows-gnu
       - name: Install mingw linker
@@ -117,7 +117,7 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
             librsvg2-dev patchelf libgtk-3-dev
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@1.88.0
+        uses: dtolnay/rust-toolchain@1.120.0
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
