@@ -1,0 +1,96 @@
+name: Bug report
+description: Report a reproducible defect in Shikra
+title: "[bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Do not** use this form for security
+        vulnerabilities — see SECURITY.md for private reporting.
+
+        Make sure you are testing systems you own or are authorized to test.
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Release tag or `git rev-parse HEAD`.
+      placeholder: v0.1.0 or commit hash
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      multiple: false
+      options:
+        - shikra-server (teamserver)
+        - shikra-implant (agent)
+        - shikra-client (CLI)
+        - GUI console
+        - shikra-builder
+        - MCP / AI copilot
+        - docs / build
+    validations:
+      required: true
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport (agents only)
+      multiple: false
+      options:
+        - not applicable
+        - session (gRPC)
+        - beacon (HTTP/S)
+        - quic
+        - dns
+        - wireguard
+        - fallback chain
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Actual behavior, with exact commands where possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Minimal steps to reproduce, including config snippets (redact tokens/keys).
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS/arch of server and agent, Rust version, PostgreSQL version, deployment (compose/manual).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Redact tokens, keys, hostnames, and addresses you consider sensitive.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: I am reporting behavior on systems I own or am authorized to test.
+          required: true
+        - label: I searched existing issues for duplicates.
+          required: true
+        - label: This is not a security vulnerability (those go through SECURITY.md).
+          required: true

@@ -1,0 +1,56 @@
+name: Feature request
+description: Suggest a capability or improvement
+title: "[feat] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Shikra is an authorized-testing tool. Features that reduce scoping
+        (self-propagation, unattributed targeting) are out of scope.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      multiple: false
+      options:
+        - shikra-server (teamserver)
+        - shikra-implant (agent)
+        - shikra-client (CLI)
+        - GUI console
+        - shikra-builder
+        - MCP / AI copilot
+        - transports
+        - extensions
+        - docs
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What operational problem does this solve in an authorized engagement?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you want. Note any OPSEC or safety implications.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: I searched existing issues and discussions for duplicates.
+          required: true
+        - label: This feature is for authorized testing workflows.
+          required: true

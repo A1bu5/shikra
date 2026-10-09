@@ -1,0 +1,27 @@
+[package]
+name = "shikra-builder"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shikra C2 implant build orchestrator"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "shikra-builder"
+path = "src/main.rs"
+
+[dependencies]
+shikra-core.workspace = true
+shikra-evasion.workspace = true
+shikra-transport.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

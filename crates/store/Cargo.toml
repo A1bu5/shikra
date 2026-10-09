@@ -1,0 +1,21 @@
+[package]
+name = "shikra-store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shikra C2 persistence layer (PostgreSQL via sqlx)"
+
+[lints]
+workspace = true
+
+[dependencies]
+shikra-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tracing.workspace = true
+uuid.workspace = true

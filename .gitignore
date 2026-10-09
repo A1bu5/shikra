@@ -1,0 +1,37 @@
+# Rust build artifacts
+/target
+/gui/target
+**/*.rs.bk
+
+# Tauri generated files
+/gui/gen
+
+# Local environment
+.env
+.env.local
+
+# Shikra runtime state (CA, keys, tokens, profiles) — never commit
+/run
+/state
+/builds
+/tmp
+**/pgdata
+**/hosted
+*.token
+console.json
+*.stage
+*-stager
+
+# Key material
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Tooling / editor
+.opencode/
+.DS_Store
+**/.DS_Store
+
+# Local reference clones (third-party, not part of this repository)
+external/

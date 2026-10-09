@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="app.title">Shikra Console</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="login-view" class="login-view">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="logo">◈</span>
+        <div>
+          <div class="brand-name">SHIKRA</div>
+          <div class="brand-sub" data-i18n="app.brandSub">operator console</div>
+        </div>
+      </div>
+
+      <nav class="login-tabs">
+        <button data-login-tab="connect" class="active" data-i18n="login.tabConnect">Connect to teamserver</button>
+        <button data-login-tab="host" data-i18n="login.tabHost">Host teamserver</button>
+      </nav>
+
+      <section id="login-connect" class="login-pane active">
+        <label><span data-i18n="login.serverUrl">Server URL</span>
+          <input id="login-endpoint" placeholder="https://127.0.0.1:8443" spellcheck="false" />
+        </label>
+        <label><span data-i18n="login.ca">CA certificate</span>
+          <div class="path-row">
+            <input id="login-ca" class="path-input" data-i18n-placeholder="login.caPlaceholder" placeholder="drag ca.pem here or browse" spellcheck="false" />
+            <button class="browse-btn" data-target="login-ca" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+          </div>
+        </label>
+        <label><span data-i18n="login.token">Operator token</span>
+          <input id="login-token" type="password" spellcheck="false" data-i18n-placeholder="login.tokenPlaceholder" placeholder="operator bearer token" />
+        </label>
+        <div id="login-error" class="login-error hidden"></div>
+        <button id="btn-login-connect" class="primary big" data-i18n="login.connect">Connect</button>
+        <div id="login-recent" class="login-recent"></div>
+      </section>
+
+      <section id="login-host" class="login-pane">
+        <div class="grid-2">
+          <label><span data-i18n="host.stateDir">State directory</span>
+            <div class="path-row">
+              <input id="host-state-dir" class="path-input" spellcheck="false" />
+              <button class="browse-btn" data-target="host-state-dir" data-kind="dir" data-i18n-title="common.chooseFolder" title="Choose folder">…</button>
+            </div>
+          </label>
+          <label><span data-i18n="host.database">Database</span>
+            <select id="host-db-mode">
+              <option value="embedded" selected data-i18n="host.dbEmbedded">Embedded (automatic, no install)</option>
+              <option value="external" data-i18n="host.dbExternal">External PostgreSQL URL</option>
+            </select>
+          </label>
+        </div>
+        <div class="grid-2">
+          <label><span data-i18n="host.operatorInterface">Operator interface</span>
+            <select id="host-operator-host">
+              <option value="127.0.0.1" selected data-i18n="host.localOnly">127.0.0.1 (local only)</option>
+              <option value="0.0.0.0" data-i18n="host.allInterfaces">0.0.0.0 (all interfaces)</option>
+            </select>
+          </label>
+          <label><span data-i18n="host.operatorPort">Operator port (gRPC)</span>
+            <div class="path-row">
+              <input id="host-operator-port" type="number" min="1" max="65535" value="8443" />
+              <button id="btn-host-free-port" class="ghost" data-i18n-title="host.autoPortTitle" title="Find a free port" data-i18n="host.autoPort">auto</button>
+            </div>
+          </label>
+        </div>
+        <div id="host-db-embedded" class="db-panel">
+          <div class="row tight">
+            <span id="host-db-status" class="status offline" data-i18n="host.dbNotPrepared">not prepared</span>
+            <button id="btn-db-start" class="ghost" data-i18n="host.prepareDb">Prepare database</button>
+            <button id="btn-db-stop" class="ghost" data-i18n="host.stopDb">Stop database</button>
+          </div>
+          <p class="muted db-note" data-i18n="host.dbNote">A private PostgreSQL runs inside the state directory. It is provisioned automatically on first use.</p>
+        </div>
+        <label id="host-db-external" class="hidden"><span data-i18n="host.externalUrl">PostgreSQL URL</span>
+          <input id="host-database" placeholder="postgres://user@localhost/shikra" spellcheck="false" />
+        </label>
+        <div class="row">
+          <button id="btn-host-init" data-i18n="host.init">Initialize material</button>
+          <button id="btn-host-start" class="primary" data-i18n="host.start">Start teamserver</button>
+          <button id="btn-host-stop" data-i18n="host.stop">Stop</button>
+          <span id="host-status" class="status offline" data-i18n="host.stopped">stopped</span>
+        </div>
+        <div id="host-material" class="host-material hidden">
+          <h4 data-i18n="host.materialTitle">CA &amp; credentials generated — store them safely</h4>
+          <div class="material-row"><span data-i18n="host.matCa">CA certificate</span><code id="mat-ca"></code><button class="ghost copy-btn" data-copy="mat-ca" data-i18n="host.copy">copy</button></div>
+          <div class="material-row"><span data-i18n="host.matEnroll">Enrollment token</span><code id="mat-enroll"></code><button class="ghost copy-btn" data-copy="mat-enroll" data-i18n="host.copy">copy</button></div>
+          <div class="material-row"><span data-i18n="host.matOperator">Operator token</span><code id="mat-operator"></code><button class="ghost copy-btn" data-copy="mat-operator" data-i18n="host.copy">copy</button></div>
+          <div class="material-row"><span data-i18n="host.matIdentity">Server identity</span><code id="mat-identity"></code><button class="ghost copy-btn" data-copy="mat-identity" data-i18n="host.copy">copy</button></div>
+          <button id="btn-host-use" class="primary" data-i18n="host.useToConnect">Use these to connect</button>
+        </div>
+        <pre id="host-log" class="report-output"></pre>
+      </section>
+
+      <button id="login-back" class="ghost login-back hidden" data-i18n="login.back">← Back to workspace</button>
+
+      <div class="login-footer">
+        <span data-i18n="app.language">Language</span>
+        <select id="lang-select">
+          <option value="en">English</option>
+          <option value="zh">简体中文</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+          <option value="ru">Русский</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="logo">◈</span>
+        <div>
+          <div class="brand-name">SHIKRA</div>
+          <div class="brand-sub" data-i18n="app.brandSub">operator console</div>
+        </div>
+      </div>
+
+      <section class="panel grow">
+        <h3>
+          <span data-i18n="sessions.title">Sessions</span>
+          <div class="session-controls">
+            <label class="check tiny" data-i18n-title="sessions.showDeadTitle" title="Show dead sessions">
+              <input id="show-dead" type="checkbox" /> <span data-i18n="sessions.dead">dead</span>
+            </label>
+            <button id="btn-refresh" class="ghost" data-i18n-title="common.refresh" title="Refresh">⟳</button>
+          </div>
+        </h3>
+        <ul id="session-list" class="session-list"></ul>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div id="active-session" class="active-session" data-i18n="session.none">no session selected</div>
+        <div class="topbar-actions">
+          <span id="conn-status" class="status online" data-i18n="top.online">online</span>
+          <button id="btn-settings" class="ghost" data-i18n-title="top.settings" title="Connection settings">⚙</button>
+          <button id="btn-disconnect" class="ghost" data-i18n="top.disconnect">Disconnect</button>
+        </div>
+        <nav class="tabs">
+          <button data-tab="terminal" class="tab active" data-i18n="tab.terminal">Terminal</button>
+          <button data-tab="files" class="tab" data-i18n="tab.files">Files</button>
+          <button data-tab="processes" class="tab" data-i18n="tab.processes">Processes</button>
+          <button data-tab="tasks" class="tab" data-i18n="tab.tasks">Tasks</button>
+          <button data-tab="listen" class="tab" data-i18n="tab.listen">Listeners</button>
+          <button data-tab="payload" class="tab" data-i18n="tab.payload">Payload</button>
+          <button data-tab="profiles" class="tab" data-i18n="tab.profiles">Profiles</button>
+          <button data-tab="extensions" class="tab" data-i18n="tab.extensions">Extensions</button>
+          <button data-tab="tunnels" class="tab" data-i18n="tab.tunnels">Tunnels</button>
+          <button data-tab="graph" class="tab" data-i18n="tab.graph">Graph</button>
+          <button data-tab="chat" class="tab" data-i18n="tab.chat">Chat</button>
+          <button data-tab="events" class="tab" data-i18n="tab.events">Events</button>
+          <button data-tab="scripts" class="tab" data-i18n="tab.scripts">Scripts</button>
+          <button data-tab="team" class="tab" data-i18n="tab.team">Team</button>
+        </nav>
+      </header>
+
+      <section id="tab-terminal" class="tab-page active">
+        <div id="terminal-output" class="terminal-output"></div>
+        <div class="terminal-input">
+          <span class="prompt">$</span>
+          <input id="terminal-command" data-i18n-placeholder="terminal.placeholder" placeholder="shell command…" spellcheck="false" autocomplete="off" />
+          <button id="btn-run-command" class="primary" data-i18n="terminal.run">Run</button>
+        </div>
+        <div class="quick-actions">
+          <button data-task="whoami">whoami</button>
+          <button data-task="hostname">hostname</button>
+          <button data-task="pwd">pwd</button>
+          <button data-task="ps">ps</button>
+          <button data-task="netstat">netstat</button>
+          <button data-task="ifconfig">ifconfig</button>
+          <button data-task="env">env</button>
+        </div>
+      </section>
+
+      <section id="tab-files" class="tab-page">
+        <div class="file-toolbar">
+          <input id="files-path" value="." spellcheck="false" />
+          <button id="btn-ls" class="primary" data-i18n="files.list">List</button>
+          <button id="btn-upload" data-i18n="files.upload">Upload…</button>
+          <button id="btn-mkdir" data-i18n="files.mkdir">New folder</button>
+        </div>
+        <div class="file-layout">
+          <table class="file-table">
+            <thead>
+              <tr>
+                <th data-i18n="files.name">Name</th>
+                <th data-i18n="files.type">Type</th>
+                <th class="right" data-i18n="files.size">Size</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="file-rows"></tbody>
+          </table>
+          <div class="file-preview">
+            <div class="file-preview-head">
+              <span id="preview-name" data-i18n="files.preview">preview</span>
+              <button id="btn-download" class="ghost" data-i18n="files.download">Download</button>
+            </div>
+            <pre id="preview-content"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-processes" class="tab-page">
+        <div class="file-toolbar">
+          <input id="proc-filter" data-i18n-placeholder="procs.filterPlaceholder" placeholder="filter by name or user" spellcheck="false" />
+          <button id="btn-procs-refresh" class="primary" data-i18n="common.refresh">Refresh</button>
+          <button id="btn-reflect-dll" data-i18n="procs.reflectDll">Reflect DLL…</button>
+          <label class="check tiny"><input id="procs-tree" type="checkbox" /> <span data-i18n="procs.tree">tree view</span></label>
+        </div>
+        <div class="file-layout">
+          <table class="file-table">
+            <thead>
+              <tr>
+                <th data-i18n="procs.pid">PID</th>
+                <th data-i18n="procs.ppid">PPID</th>
+                <th data-i18n="procs.name">Name</th>
+                <th data-i18n="procs.user">User</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="proc-rows"></tbody>
+          </table>
+          <div class="file-preview">
+            <div class="file-preview-head">
+              <span id="proc-detail" data-i18n="procs.detail">process details</span>
+            </div>
+            <pre id="proc-detail-body" class="proc-detail"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-tasks" class="tab-page">
+        <div class="file-toolbar">
+          <button id="btn-tasks-refresh" class="primary" data-i18n="common.refresh">Refresh</button>
+          <span class="muted" data-i18n="tasks.hint">Recent tasks for the selected session. Running jobs can be cancelled.</span>
+        </div>
+        <table class="file-table">
+          <thead>
+            <tr>
+              <th data-i18n="tasks.state">State</th>
+              <th data-i18n="tasks.command">Command</th>
+              <th data-i18n="tasks.created">Created</th>
+              <th class="right" data-i18n="tasks.exit">Exit</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="task-rows"></tbody>
+        </table>
+        <pre id="task-output" class="report-output"></pre>
+      </section>
+
+      <section id="tab-graph" class="tab-page">
+        <div class="file-toolbar">
+          <button id="btn-graph-refresh" class="primary" data-i18n="graph.refresh">Refresh topology</button>
+          <span class="muted" data-i18n="graph.hint">Teamserver, sessions and pivot tunnels. Click a node to select the session.</span>
+        </div>
+        <div id="graph-canvas" class="graph-canvas"></div>
+      </section>
+
+      <section id="tab-extensions" class="tab-page">
+        <div class="ext-grid">
+          <div class="card">
+            <h3 data-i18n="ext.bofTitle">BOF (COFF)</h3>
+            <label><span data-i18n="ext.bofFile">Object file</span>
+              <div class="path-row">
+                <input id="bof-path" class="path-input" data-drop-label="BOF object" data-i18n-placeholder="ext.bofPlaceholder" placeholder="drag a .obj here" spellcheck="false" />
+                <button class="browse-btn" data-target="bof-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+              </div>
+            </label>
+            <label><span data-i18n="ext.args">Arguments</span>
+              <input id="bof-args" placeholder="arg1 arg2" spellcheck="false" />
+            </label>
+            <button id="btn-bof" class="primary" data-i18n="ext.bofRun">Execute BOF</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="ext.wasmTitle">WASM extension</h3>
+            <label><span data-i18n="ext.name">Name</span>
+              <input id="wasm-name" placeholder="my-extension" spellcheck="false" />
+            </label>
+            <label><span data-i18n="ext.wasmFile">Module file</span>
+              <div class="path-row">
+                <input id="wasm-path" class="path-input" data-drop-label="WASM module" data-i18n-placeholder="ext.wasmPlaceholder" placeholder="drag a .wasm here" spellcheck="false" />
+                <button class="browse-btn" data-target="wasm-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+              </div>
+            </label>
+            <label><span data-i18n="ext.args">Arguments</span>
+              <input id="wasm-args" placeholder="args" spellcheck="false" />
+            </label>
+            <div class="row">
+              <button id="btn-wasm-load" data-i18n="common.load">Load</button>
+              <button id="btn-wasm-run" class="primary" data-i18n="common.run">Run</button>
+              <button id="btn-wasm-list" class="ghost" data-i18n="common.list">List</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3 data-i18n="ext.registryTitle">Registry push</h3>
+            <label><span data-i18n="ext.extName">Extension name</span>
+              <input id="registry-name" placeholder="hello" spellcheck="false" />
+            </label>
+            <button id="btn-registry-push" class="primary" data-i18n="ext.fetchLoad">Fetch + load</button>
+            <button id="btn-registry-list" class="ghost" data-i18n="ext.listRegistry">List registry</button>
+            <pre id="registry-output" class="terminal"></pre>
+          </div>
+          <div class="card">
+            <h3 data-i18n="ext.nativeTitle">Native extensions</h3>
+            <label><span data-i18n="ext.name">Name</span>
+              <input id="native-name" placeholder="hello" spellcheck="false" />
+            </label>
+            <label><span data-i18n="ext.library">Library file (this machine, pushed to agent)</span>
+              <div class="path-row">
+                <input id="native-path" class="path-input" data-drop-label="native library" data-i18n-placeholder="ext.nativePlaceholder" placeholder="drag a .so/.dll/.dylib here" spellcheck="false" />
+                <button class="browse-btn" data-target="native-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+              </div>
+            </label>
+            <label><span data-i18n="ext.args">Arguments</span>
+              <input id="native-args" placeholder="args" spellcheck="false" />
+            </label>
+            <div class="row">
+              <button id="btn-native-load" data-i18n="common.load">Load</button>
+              <button id="btn-native-run" class="primary" data-i18n="common.run">Run</button>
+              <button id="btn-native-list" class="ghost" data-i18n="common.list">List</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-listen" class="tab-page">
+        <div class="ext-grid">
+          <div class="card">
+            <h3 data-i18n="listen.startTitle">Start a listener</h3>
+            <div class="grid-2">
+              <label><span data-i18n="listen.kind">Kind</span>
+                <select id="listen-kind">
+                  <option value="http" selected>http (beacon + CDN)</option>
+                  <option value="quic">quic</option>
+                  <option value="dns">dns</option>
+                  <option value="wireguard">wireguard</option>
+                </select>
+              </label>
+              <label><span data-i18n="listen.addr">Listen address</span>
+                <input id="listen-addr" value="0.0.0.0:8080" spellcheck="false" />
+              </label>
+            </div>
+            <label id="listen-zone-row" class="hidden"><span data-i18n="listen.zone">DNS zone</span>
+              <input id="listen-zone" value="dns.shikra" spellcheck="false" />
+            </label>
+            <div class="row">
+              <button id="btn-listener-start" class="primary" data-i18n="listen.start">Start listener</button>
+              <button id="btn-listeners-refresh" class="ghost" data-i18n="common.refresh">Refresh</button>
+            </div>
+            <p class="muted db-note" data-i18n="listen.note">Listeners bind on the teamserver host. Port 0 picks a free port automatically.</p>
+          </div>
+          <div class="card grow-card">
+            <h3 data-i18n="listen.runningTitle">Running listeners</h3>
+            <div id="listener-list" class="listener-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-payload" class="tab-page">
+        <div class="builder-layout">
+          <div class="builder-form">
+            <div class="card">
+              <h3 data-i18n="build.targetTitle">Target payload</h3>
+              <div class="grid-2">
+                <label><span data-i18n="build.name">Name</span>
+                  <input id="build-name" value="beacon" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.mode">Mode</span>
+                  <select id="build-mode">
+                    <option value="session" data-i18n="build.modeSession">session (gRPC, interactive)</option>
+                    <option value="beacon" selected data-i18n="build.modeBeacon">beacon (HTTP polling)</option>
+                    <option value="quic" data-i18n="build.modeQuic">quic beacon</option>
+                    <option value="dns" data-i18n="build.modeDns">dns beacon</option>
+                    <option value="wireguard" data-i18n="build.modeWg">wireguard beacon</option>
+                  </select>
+                </label>
+              </div>
+              <div class="grid-2">
+                <label><span data-i18n="build.targetTriple">Target triple</span>
+                  <input id="build-target" placeholder="auto (host)" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.outputDir">Output directory</span>
+                  <div class="path-row">
+                    <input id="build-output" class="path-input solid" data-drop-label="output dir" spellcheck="false" />
+                    <button class="browse-btn" data-target="build-output" data-kind="dir" data-i18n-title="common.chooseFolder" title="Choose folder">…</button>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 data-i18n="build.listenerTitle">Listener &amp; transport (target-facing)</h3>
+              <label><span data-i18n="build.listenerSelect">Active listener</span>
+                <select id="build-listener"></select>
+              </label>
+              <div class="grid-2">
+                <label><span data-i18n="build.c2">Teamserver gRPC (c2 url)</span>
+                  <input id="build-c2" placeholder="https://10.0.0.1:8443" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.http">HTTP beacon URL</span>
+                  <input id="build-http" placeholder="http://10.0.0.1:8080" spellcheck="false" />
+                </label>
+              </div>
+              <label class="mode-field" data-modes="session"><span data-i18n="build.pipePath">Pipe path (child agent via SMB / Unix socket)</span>
+                <input id="build-pipe-path" data-i18n-placeholder="build.pipePathPlaceholder" placeholder="\\HOST\pipe\shikra-smb" spellcheck="false" />
+              </label>
+              <div class="grid-2 mode-field" data-modes="quic">
+                <label><span data-i18n="build.quic">QUIC server</span>
+                  <input id="build-quic" placeholder="10.0.0.1:8444" spellcheck="false" />
+                </label>
+                <div></div>
+              </div>
+              <div class="grid-2 mode-field" data-modes="dns">
+                <label><span data-i18n="build.dns">DNS server</span>
+                  <input id="build-dns" placeholder="10.0.0.1:5353" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.dnsZone">DNS zone</span>
+                  <input id="build-dns-zone" value="dns.shikra" spellcheck="false" />
+                </label>
+              </div>
+              <div class="grid-2 mode-field" data-modes="wireguard">
+                <label><span data-i18n="build.wg">WireGuard server</span>
+                  <input id="build-wg" placeholder="10.0.0.1:51820" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.wgKey">WG server public key (hex)</span>
+                  <input id="build-wg-key" spellcheck="false" />
+                </label>
+              </div>
+              <div class="grid-2">
+                <label><span data-i18n="build.tlsDomain">TLS domain (SNI)</span>
+                  <input id="build-tls-domain" value="localhost" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.telemetry">Telemetry</span>
+                  <div class="row tight">
+                    <span class="mini-label" data-i18n="build.heartbeat">heartbeat</span>
+                    <input id="build-heartbeat" type="number" min="1" value="15" />
+                    <span class="mini-label" data-i18n="build.jitter">jitter</span>
+                    <input id="build-jitter" type="number" min="0" value="5" />
+                    <span class="mini-label" data-i18n="build.poll">poll</span>
+                    <input id="build-poll" type="number" min="1" value="5" />
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 data-i18n="build.enrollTitle">Enrollment material</h3>
+              <label><span data-i18n="build.ca">CA certificate (pinned)</span>
+                <div class="path-row">
+                  <input id="build-ca" class="path-input" data-drop-label="CA cert" spellcheck="false" />
+                  <button class="browse-btn" data-target="build-ca" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+                </div>
+              </label>
+              <p class="muted field-note" data-i18n="build.caHelp"></p>
+              <label><span data-i18n="build.tokenFile">Enrollment token file</span>
+                <div class="path-row">
+                  <input id="build-token" class="path-input" data-drop-label="enroll token" spellcheck="false" />
+                  <button class="browse-btn" data-target="build-token" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+                </div>
+              </label>
+              <p class="muted field-note" data-i18n="build.enrollHelp"></p>
+              <label><span data-i18n="build.identityFile">Server identity public key file</span>
+                <div class="path-row">
+                  <input id="build-identity" class="path-input" data-drop-label="server identity" spellcheck="false" />
+                  <button class="browse-btn" data-target="build-identity" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+                </div>
+              </label>
+              <p class="muted field-note" data-i18n="build.identityHelp"></p>
+            </div>
+
+            <div class="card">
+              <h3 data-i18n="build.optionsTitle">Build options</h3>
+              <label class="check">
+                <input id="build-use-profiles" type="checkbox" checked />
+                <span data-i18n="build.useProfiles">Bake live teamserver C2 profiles into beacons (recommended)</span>
+              </label>
+              <label class="check">
+                <input id="build-release" type="checkbox" checked />
+                <span data-i18n="build.release">Release build (stripped, optimized)</span>
+              </label>
+              <label class="check">
+                <input id="build-no-obf" type="checkbox" />
+                <span data-i18n="build.noObf">Disable string obfuscation (debugging only)</span>
+              </label>
+              <div class="grid-2">
+                <label><span data-i18n="build.seed">Obfuscation seed (hex, optional)</span>
+                  <input id="build-seed" data-i18n-placeholder="build.seedPlaceholder" placeholder="random" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.killdate">Killdate (optional)</span>
+                  <input id="build-killdate" type="datetime-local" />
+                </label>
+              </div>
+              <div class="grid-2">
+                <label><span data-i18n="build.workingHours">Working hours (agent local)</span>
+                  <input id="build-working-hours" data-i18n-placeholder="build.workingHoursPlaceholder" placeholder="9:00-17:00" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.peTimestamp">PE timestamp</span>
+                  <input id="build-pe-timestamp" data-i18n-placeholder="build.peTimestampPlaceholder" placeholder="unchanged" spellcheck="false" />
+                </label>
+              </div>
+              <div class="grid-2">
+                <label><span data-i18n="build.serviceName">Windows service name (optional)</span>
+                  <input id="build-service-name" data-i18n-placeholder="build.serviceNamePlaceholder" placeholder="ShikraAgent" spellcheck="false" />
+                </label>
+                <div></div>
+              </div>
+              <label><span data-i18n="build.replaceStrings">Replace strings (one OLD=NEW per line)</span>
+                <textarea id="build-replace-strings" rows="2" spellcheck="false"></textarea>
+              </label>
+              <label class="check">
+                <input id="build-stager" type="checkbox" />
+                <span data-i18n="build.stager">Produce stager pair (.stage + loader)</span>
+              </label>
+              <div class="grid-2 mode-stager">
+                <label><span data-i18n="build.stageUrl">Stage download URL</span>
+                  <input id="build-stage-url" placeholder="http://10.0.0.1:8080/cdn/beacon.stage" spellcheck="false" />
+                </label>
+                <label><span data-i18n="build.stageArgs">Stager arguments (optional)</span>
+                  <input id="build-stage-args" data-i18n-placeholder="build.stageArgsPlaceholder" placeholder="leave empty" spellcheck="false" />
+                </label>
+                <p class="muted field-note" data-i18n="build.stageArgsHelp"></p>
+              </div>
+            </div>
+
+            <div class="row">
+              <button id="btn-build" class="primary big" data-i18n="build.build">Build payload</button>
+              <button id="btn-build-copy" class="ghost" data-i18n="build.copy">Copy command</button>
+            </div>
+          </div>
+
+          <div class="builder-report">
+            <div class="card grow-card">
+              <h3 data-i18n="build.outputTitle">Build output</h3>
+              <div id="build-status" class="status offline" data-i18n="build.idle">idle</div>
+              <div id="build-result" class="build-result"></div>
+              <pre id="build-log" class="report-output"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-profiles" class="tab-page">
+        <div class="profiles-toolbar">
+          <button id="btn-profiles-refresh" class="ghost" data-i18n="profiles.refresh">Refresh from server</button>
+          <button id="btn-profile-add" data-i18n="profiles.add">Add profile</button>
+          <button id="btn-profiles-save" class="primary" data-i18n="profiles.save">Save &amp; apply</button>
+          <span class="muted" id="profiles-hint" data-i18n="profiles.hint">Profile edits apply live to the HTTP listener and are baked into new beacons.</span>
+        </div>
+        <div id="profile-cards" class="profile-cards"></div>
+      </section>
+
+      <section id="tab-chat" class="tab-page">
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="terminal-input">
+          <span class="prompt">#</span>
+          <input id="chat-input" data-i18n-placeholder="chat.placeholder" placeholder="message the team…" spellcheck="false" autocomplete="off" />
+          <button id="btn-chat-send" class="primary" data-i18n="chat.send">Send</button>
+        </div>
+      </section>
+
+      <section id="tab-events" class="tab-page">
+        <div class="file-toolbar">
+          <button id="btn-events-refresh" class="primary" data-i18n="common.refresh">Refresh</button>
+          <span class="muted" data-i18n="events.hint">Teamserver event feed: sessions, listeners, operators, canaries.</span>
+        </div>
+        <div id="event-list" class="event-list"></div>
+      </section>
+
+      <section id="tab-scripts" class="tab-page">
+        <div class="scripts-layout">
+          <div class="scripts-sidebar">
+            <div class="row">
+              <button id="btn-script-new" data-i18n="scripts.new">New</button>
+              <button id="btn-script-import" class="ghost" data-i18n="scripts.import">Import…</button>
+            </div>
+            <ul id="script-list" class="team-list"></ul>
+          </div>
+          <div class="scripts-editor">
+            <div class="file-toolbar">
+              <input id="script-name" data-i18n-placeholder="scripts.namePlaceholder" placeholder="script-name" spellcheck="false" />
+              <button id="btn-script-save" class="primary" data-i18n="common.save">Save</button>
+              <button id="btn-script-run" class="primary" data-i18n="scripts.run">Run</button>
+              <button id="btn-script-export" class="ghost" data-i18n="scripts.export">Export…</button>
+              <button id="btn-script-delete" class="ghost" data-i18n="files.delete">Delete</button>
+            </div>
+            <textarea id="script-code" class="script-code" spellcheck="false"></textarea>
+            <pre id="script-output" class="report-output script-output"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-team" class="tab-page">
+        <div class="team-grid">
+          <div class="card">
+            <h3 data-i18n="team.operators">Operators</h3>
+            <ul id="operator-list" class="team-list"></ul>
+            <label><span data-i18n="team.name">Name</span>
+              <input id="op-name" placeholder="operator-name" spellcheck="false" />
+            </label>
+            <label><span data-i18n="team.role">Role</span>
+              <select id="op-role">
+                <option value="operator">operator</option>
+                <option value="watcher">watcher</option>
+                <option value="admin">admin</option>
+              </select>
+            </label>
+            <button id="btn-op-add" class="primary" data-i18n="team.createOperator">Create operator</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="team.credentials">Credentials</h3>
+            <ul id="cred-list" class="team-list"></ul>
+            <label><span data-i18n="team.host">Host</span>
+              <input id="cred-host" placeholder="10.0.0.5" spellcheck="false" />
+            </label>
+            <div class="row">
+              <input id="cred-user" data-i18n-placeholder="team.username" placeholder="username" spellcheck="false" />
+              <input id="cred-secret" data-i18n-placeholder="team.secret" placeholder="secret" spellcheck="false" />
+            </div>
+            <button id="btn-cred-add" class="primary" data-i18n="team.addCredential">Add credential</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="team.loot">Loot</h3>
+            <ul id="loot-list" class="team-list"></ul>
+            <label><span data-i18n="team.name">Name</span>
+              <input id="loot-name" placeholder="artifact-name" spellcheck="false" />
+            </label>
+            <label><span data-i18n="team.lootFile">Local file</span>
+              <div class="path-row">
+                <input id="loot-file" class="path-input" data-drop-label="loot file" data-i18n-placeholder="team.lootPlaceholder" placeholder="drag a file here" spellcheck="false" />
+                <button class="browse-btn" data-target="loot-file" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+              </div>
+            </label>
+            <button id="btn-loot-add" class="primary" data-i18n="team.storeLoot">Store loot</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="team.canaries">Canaries</h3>
+            <ul id="canary-list" class="team-list"></ul>
+            <label><span data-i18n="team.note">Note</span>
+              <input id="canary-note" placeholder="honeytoken" spellcheck="false" />
+            </label>
+            <button id="btn-canary-add" class="primary" data-i18n="team.createCanary">Create canary</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="team.webhook">Notifications</h3>
+            <label><span data-i18n="team.webhookUrl">Discord webhook URL</span>
+              <input id="webhook-url" placeholder="https://discord.com/api/webhooks/…" spellcheck="false" />
+            </label>
+            <div class="row">
+              <button id="btn-webhook-save" class="primary" data-i18n="common.save">Save</button>
+              <button id="btn-webhook-clear" class="ghost" data-i18n="team.webhookDisable">Disable</button>
+            </div>
+            <p class="muted db-note" data-i18n="team.webhookNote">Sends a notification on every new session callback.</p>
+          </div>
+          <div class="card">
+            <h3 data-i18n="team.audit">Audit &amp; Report</h3>
+            <div id="audit-status" class="status offline" data-i18n="team.notChecked">not checked</div>
+            <div class="row">
+              <button id="btn-audit" class="primary" data-i18n="team.verifyAudit">Verify audit chain</button>
+              <button id="btn-report" data-i18n="team.generateReport">Generate report</button>
+            </div>
+            <pre id="report-output" class="report-output"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-tunnels" class="tab-page">
+        <div class="ext-grid">
+          <div class="card">
+            <h3 data-i18n="tun.socks">SOCKS5 proxy</h3>
+            <label><span data-i18n="tun.listen">Listen address</span>
+              <input id="socks-listen" value="127.0.0.1:1080" spellcheck="false" />
+            </label>
+            <button id="btn-socks" class="primary" data-i18n="tun.startSocks">Start SOCKS5</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="tun.localFwd">Local port forward</h3>
+            <label><span data-i18n="tun.listen">Listen address</span>
+              <input id="portfwd-listen" value="127.0.0.1:8000" spellcheck="false" />
+            </label>
+            <label><span data-i18n="tun.targetAgent">Target (agent side)</span>
+              <input id="portfwd-target" value="127.0.0.1:80" spellcheck="false" />
+            </label>
+            <button id="btn-portfwd" class="primary" data-i18n="tun.startFwd">Start forward</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="tun.remoteFwd">Remote port forward</h3>
+            <label><span data-i18n="tun.bindAgent">Bind (agent side)</span>
+              <input id="rport-bind" value="127.0.0.1:9000" spellcheck="false" />
+            </label>
+            <label><span data-i18n="tun.targetServer">Target (server side)</span>
+              <input id="rport-to" value="127.0.0.1:80" spellcheck="false" />
+            </label>
+            <button id="btn-rport" class="primary" data-i18n="tun.startRport">Start rportfwd</button>
+            <div class="row">
+              <input id="rport-id" data-i18n-placeholder="tun.forwardId" placeholder="forward id to stop" spellcheck="false" />
+              <button id="btn-rport-stop" data-i18n="tun.stop">Stop</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3 data-i18n="tun.pivots">Pivots</h3>
+            <button id="btn-pivots" class="primary" data-i18n="tun.listPivots">List pivots</button>
+            <pre id="pivots-output" class="terminal"></pre>
+          </div>
+          <div class="card">
+            <h3 data-i18n="tun.scan">Port scan (agent side)</h3>
+            <label><span data-i18n="tun.scanTarget">Target</span>
+              <input id="scan-target" value="127.0.0.1" spellcheck="false" />
+            </label>
+            <label><span data-i18n="tun.scanPorts">Ports</span>
+              <input id="scan-ports" value="top100" spellcheck="false" />
+            </label>
+            <button id="btn-portscan" class="primary" data-i18n="tun.scanBtn">Scan</button>
+            <pre id="portscan-output" class="terminal"></pre>
+          </div>
+          <div class="card">
+            <h3 data-i18n="tun.screenshot">Screenshot</h3>
+            <button id="btn-screenshot" class="primary" data-i18n="tun.capture">Capture</button>
+            <img id="screenshot-img" class="screenshot hidden" data-i18n-alt="tun.screenshotAlt" alt="target screenshot" />
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div id="session-menu" class="session-menu hidden"></div>
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>

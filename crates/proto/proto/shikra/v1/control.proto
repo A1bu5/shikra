@@ -1,0 +1,399 @@
+syntax = "proto3";
+
+package shikra.v1;
+
+import "shikra/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service ControlPlane {
+  rpc GetVersion(Empty) returns (VersionInfo);
+  rpc ListSessions(Empty) returns (stream SessionInfo);
+  rpc SubmitTask(TaskRequest) returns (stream TaskResult);
+  rpc StreamTunnel(stream OperatorTunnelFrame) returns (stream OperatorTunnelFrame);
+  rpc StartRportFwd(RportFwdRequest) returns (RportFwdStatus);
+  rpc StopRportFwd(RportFwdId) returns (RportFwdStatus);
+  rpc ListRportFwds(Empty) returns (stream RportFwdInfo);
+
+  // Team features
+  rpc ListTasks(TaskQuery) returns (stream TaskRecord);
+  rpc ListOperators(Empty) returns (stream OperatorInfo);
+  rpc CreateOperator(CreateOperatorRequest) returns (CreateOperatorResponse);
+  rpc DeleteOperator(OperatorId) returns (Empty);
+  rpc ListCredentials(Empty) returns (stream CredentialInfo);
+  rpc AddCredential(AddCredentialRequest) returns (CredentialInfo);
+  rpc DeleteCredential(CredentialId) returns (Empty);
+  rpc ListLoot(Empty) returns (stream LootInfo);
+  rpc AddLoot(AddLootRequest) returns (LootInfo);
+  rpc DeleteLoot(LootId) returns (Empty);
+  rpc ListCanaries(Empty) returns (stream CanaryInfo);
+  rpc CreateCanary(CreateCanaryRequest) returns (CanaryInfo);
+  rpc VerifyAudit(Empty) returns (AuditStatus);
+  rpc ListReactions(Empty) returns (stream ReactionInfo);
+  rpc AddReaction(AddReactionRequest) returns (ReactionInfo);
+  rpc DeleteReaction(ReactionId) returns (Empty);
+
+  // Reconnaissance & integrations
+  rpc RunScan(ScanRequest) returns (ScanResult);
+  rpc ListHosts(Empty) returns (stream HostInfo);
+  rpc MsfStatus(Empty) returns (MsfStatusInfo);
+  rpc MsfExec(MsfExecRequest) returns (MsfExecResult);
+
+  // Signed extension registry
+  rpc ListExtensions(Empty) returns (stream ExtensionInfo);
+  rpc InstallExtension(InstallExtensionRequest) returns (ExtensionInfo);
+  rpc FetchExtension(FetchExtensionRequest) returns (FetchExtensionResponse);
+  rpc DeleteExtension(ExtensionId) returns (Empty);
+  rpc GetArmoryKey(Empty) returns (ArmoryKeyInfo);
+
+  // Malleable C2 profiles (HTTP beacon transport)
+  rpc GetProfiles(Empty) returns (ProfileSetInfo);
+  rpc SetProfiles(ProfileSetInfo) returns (Empty);
+
+  // Runtime beacon listeners (started/stopped after login)
+  rpc ListListeners(Empty) returns (ListenerSet);
+  rpc StartListener(StartListenerRequest) returns (ListenerInfo);
+  rpc StopListener(ListenerId) returns (Empty);
+
+  // Task queue control
+  rpc CancelTask(TaskCancel) returns (Empty);
+
+  // Team collaboration: chat, event feed, session markers, webhooks
+  rpc ListChat(ChatQuery) returns (ChatMessages);
+  rpc SendChat(ChatMessageRequest) returns (Empty);
+  rpc ListEvents(EventQuery) returns (EventList);
+  rpc SetSessionUi(SessionUiRequest) returns (Empty);
+  rpc GetWebhook(Empty) returns (WebhookInfo);
+  rpc SetWebhook(WebhookInfo) returns (Empty);
+}
+
+message TaskCancel {
+  string session_id = 1;
+  string task_id = 2;
+}
+
+message ChatQuery {
+  int64 limit = 1;
+}
+
+message ChatMessageRequest {
+  string message = 1;
+}
+
+message ChatMessageInfo {
+  string operator = 1;
+  string message = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message ChatMessages {
+  repeated ChatMessageInfo messages = 1;
+}
+
+message EventQuery {
+  int64 limit = 1;
+}
+
+message EventInfo {
+  string id = 1;
+  string kind = 2;
+  string subject = 3;
+  string payload_json = 4;
+  google.protobuf.Timestamp occurred_at = 5;
+}
+
+message EventList {
+  repeated EventInfo events = 1;
+}
+
+message SessionUiRequest {
+  string session_id = 1;
+  /// Hex color like "#ffcc00"; empty keeps the current value.
+  string color = 2;
+  /// "dead" or "alive"; empty keeps the current value.
+  string operator_status = 3;
+}
+
+message WebhookInfo {
+  /// Discord webhook URL; empty disables notifications.
+  string discord_url = 1;
+}
+
+message ListenerInfo {
+  string id = 1;
+  string kind = 2;
+  string addr = 3;
+  bool running = 4;
+  string detail = 5;
+}
+
+message ListenerSet {
+  repeated ListenerInfo listeners = 1;
+}
+
+message StartListenerRequest {
+  string kind = 1;
+  string addr = 2;
+  string dns_zone = 3;
+}
+
+message ListenerId {
+  string id = 1;
+}
+
+message ProfileInfo {
+  string name = 1;
+  string user_agent = 2;
+  string enroll_uri = 3;
+  string poll_uri = 4;
+  map<string, string> request_headers = 5;
+  map<string, string> response_headers = 6;
+  uint64 poll_interval_secs = 7;
+  uint64 jitter_secs = 8;
+}
+
+message ProfileSetInfo {
+  repeated ProfileInfo profiles = 1;
+}
+
+message ExtensionInfo {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string kind = 4;
+  string platform = 5;
+  string architecture = 6;
+  string description = 7;
+  string sha256 = 8;
+  uint64 size = 9;
+  string signer = 10;
+  string installed_by = 11;
+  google.protobuf.Timestamp created_at = 12;
+}
+
+message InstallExtensionRequest {
+  /// Serialized ExtensionPackage (JSON).
+  bytes package = 1;
+}
+
+message FetchExtensionRequest {
+  /// Extension id, or name when `by_name` is set.
+  string id = 1;
+  bool by_name = 2;
+  /// Optional platform filter when fetching by name.
+  string platform = 3;
+}
+
+message FetchExtensionResponse {
+  ExtensionInfo info = 1;
+  bytes payload = 2;
+}
+
+message ExtensionId {
+  string id = 1;
+}
+
+message ArmoryKeyInfo {
+  string public_key_hex = 1;
+}
+
+message ScanRequest {
+  string target = 1;
+  string ports = 2;
+  string arguments = 3;
+}
+
+message ScanResult {
+  bool ok = 1;
+  uint32 hosts_found = 2;
+  string message = 3;
+}
+
+message HostInfo {
+  string id = 1;
+  string ip = 2;
+  string hostname = 3;
+  string os = 4;
+  string ports = 5;
+  string source = 6;
+  google.protobuf.Timestamp discovered_at = 7;
+}
+
+message MsfStatusInfo {
+  bool connected = 1;
+  string version = 2;
+  string message = 3;
+}
+
+message MsfExecRequest {
+  string command = 1;
+}
+
+message MsfExecResult {
+  bool ok = 1;
+  string output = 2;
+}
+
+message OperatorInfo {
+  string id = 1;
+  string name = 2;
+  string role = 3;
+  bool disabled = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message TaskQuery {
+  string session_id = 1;
+  uint32 limit = 2;
+}
+
+message TaskRecord {
+  string id = 1;
+  string session_id = 2;
+  string command = 3;
+  string args = 4;
+  TaskState state = 5;
+  int32 exit_code = 6;
+  string output = 7;
+  bool ai_initiated = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp completed_at = 10;
+}
+
+message CreateOperatorRequest {
+  string name = 1;
+  string role = 2;
+}
+
+message CreateOperatorResponse {
+  OperatorInfo operator = 1;
+  string token = 2;
+}
+
+message OperatorId {
+  string id = 1;
+}
+
+message CredentialInfo {
+  string id = 1;
+  string host = 2;
+  string domain = 3;
+  string username = 4;
+  string secret = 5;
+  string kind = 6;
+  string source = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message AddCredentialRequest {
+  string host = 1;
+  string domain = 2;
+  string username = 3;
+  string secret = 4;
+  string kind = 5;
+  string source = 6;
+}
+
+message CredentialId {
+  string id = 1;
+}
+
+message LootInfo {
+  string id = 1;
+  string kind = 2;
+  string name = 3;
+  int64 size = 4;
+  string sha256 = 5;
+  bytes data = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message AddLootRequest {
+  string kind = 1;
+  string name = 2;
+  bytes data = 3;
+}
+
+message LootId {
+  string id = 1;
+}
+
+message CanaryInfo {
+  string id = 1;
+  string token = 2;
+  string kind = 3;
+  string note = 4;
+  bool triggered = 5;
+  google.protobuf.Timestamp triggered_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message CreateCanaryRequest {
+  string kind = 1;
+  string note = 2;
+}
+
+message AuditStatus {
+  bool valid = 1;
+  uint64 entries = 2;
+  string message = 3;
+}
+
+message ReactionInfo {
+  string id = 1;
+  string event_kind = 2;
+  string action = 3;
+  bool enabled = 4;
+}
+
+message AddReactionRequest {
+  string event_kind = 1;
+  string action = 2;
+}
+
+message ReactionId {
+  string id = 1;
+}
+
+message OperatorTunnelFrame {
+  string session_id = 1;
+  string tunnel_id = 2;
+  oneof body {
+    TunnelOpen open = 3;
+    TunnelData data = 4;
+    TunnelClose close = 5;
+    TunnelAccept accept = 6;
+  }
+}
+
+message RportFwdRequest {
+  string session_id = 1;
+  string bind = 2;
+  string to = 3;
+  /// "tcp" (default) or "pipe" for a Windows named-pipe listener.
+  string transport = 4;
+}
+
+message RportFwdInfo {
+  string forward_id = 1;
+  string session_id = 2;
+  string bind = 3;
+  string to = 4;
+  uint64 connections = 5;
+  /// "tcp" or "pipe" (Windows named pipe listener on the agent).
+  string transport = 6;
+}
+
+message RportFwdId {
+  string forward_id = 1;
+}
+
+message RportFwdStatus {
+  string forward_id = 1;
+  bool running = 2;
+  string message = 3;
+}
+
+service AgentLink {
+  rpc CheckIn(CheckInRequest) returns (CheckInResponse);
+  rpc StreamTasks(stream Envelope) returns (stream Envelope);
+}

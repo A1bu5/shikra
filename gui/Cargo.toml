@@ -1,0 +1,30 @@
+[package]
+name = "shikra-console"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "Apache-2.0"
+description = "Shikra C2 visual operator console (Tauri 2)"
+
+[workspace]
+resolver = "3"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2.11", features = [] }
+tauri-plugin-dialog = "2"
+postgresql_embedded = { version = "0.19", features = ["bundled", "tokio"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+tokio = { version = "1", features = ["full"] }
+prost-types = "0.14"
+shikra-client = { path = "../crates/client" }
+shikra-proto = { path = "../crates/proto" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

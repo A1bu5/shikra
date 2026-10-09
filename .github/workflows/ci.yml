@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: shikra
+          POSTGRES_PASSWORD: shikra
+          POSTGRES_DB: shikra_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U shikra"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SHIKRA_TEST_DATABASE_URL: postgres://shikra:shikra@localhost:5432/shikra_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test (unit + encrypted e2e)
+        run: cargo test --workspace
+
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cross:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-pc-windows-gnu
+          - x86_64-unknown-linux-musl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install mingw linker
+        if: matrix.target == 'x86_64-pc-windows-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+      - uses: Swatinem/rust-cache@v2
+      - name: Check implant for target
+        run: cargo check -p shikra-implant --target ${{ matrix.target }}
+      - name: Check server and client for target
+        run: cargo check -p shikra-server -p shikra-client --target ${{ matrix.target }}
+
+  hardening:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: x86_64-pc-windows-gnu
+      - name: Install mingw linker
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+      - uses: Swatinem/rust-cache@v2
+      - name: Build hardened Windows implant
+        run: |
+          cargo build -p shikra-builder
+          mkdir -p state
+          SHIKRA_DATABASE_URL=postgres://unused \
+            SHIKRA_STATE_DIR=./state \
+            timeout 10 ./target/debug/shikra-server || true
+          ./target/debug/shikra-builder --name ci-hardened --os windows --arch x86-64 \
+            --mode beacon --http-url http://127.0.0.1:8080 \
+            --enroll-token "$(cat state/enroll.token)" \
+            --server-identity "$(cat state/server-identity.pub)" \
+            --ca-cert state/ca.pem --output-dir ./builds --release
+      - name: Verify string obfuscation
+        run: ./scripts/verify-obfuscation.sh ./builds/ci-hardened.exe
+
+  gui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libgtk-3-dev
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gui
+      - name: Format
+        run: cargo fmt --all -- --check
+        working-directory: gui
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+        working-directory: gui
+      - name: Test
+        run: cargo test
+        working-directory: gui

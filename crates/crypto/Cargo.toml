@@ -1,0 +1,22 @@
+[package]
+name = "shikra-crypto"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shikra C2 cryptographic primitives (AEAD, signatures, key exchange, KDF)"
+
+[lints]
+workspace = true
+
+[dependencies]
+argon2.workspace = true
+chacha20poly1305.workspace = true
+ed25519-dalek.workspace = true
+hkdf.workspace = true
+rand.workspace = true
+rand_core.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+x25519-dalek.workspace = true
+zeroize.workspace = true

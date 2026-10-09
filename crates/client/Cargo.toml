@@ -1,0 +1,38 @@
+[package]
+name = "shikra-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shikra C2 operator client (control-plane client library and CLI)"
+
+[lints]
+workspace = true
+
+[lib]
+name = "shikra_client"
+path = "src/lib.rs"
+
+[[bin]]
+name = "shikra-client"
+path = "src/main.rs"
+
+[dependencies]
+shikra-ai.workspace = true
+shikra-core.workspace = true
+shikra-crypto.workspace = true
+shikra-proto.workspace = true
+shikra-transport.workspace = true
+anyhow.workspace = true
+base64.workspace = true
+async-trait.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+time.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true

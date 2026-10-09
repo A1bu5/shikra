@@ -1,0 +1,7 @@
+Shikra
+Copyright 2026 The Shikra Authors
+
+This product is a clean-room implementation. It contains no code from
+Sliver, Havoc, Metasploit, Cobalt Strike, or any other command-and-control
+framework. Third-party dependencies are used under their own licenses, as
+recorded in Cargo.lock and enforced by the license policy in deny.toml.

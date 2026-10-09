@@ -1,0 +1,66 @@
+[package]
+name = "shikra-implant"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shikra C2 implant (authorized red-team use only)"
+
+[lints]
+workspace = true
+
+[lib]
+name = "shikra_implant"
+path = "src/lib.rs"
+
+[[bin]]
+name = "shikra-implant"
+path = "src/main.rs"
+
+[[bin]]
+name = "shikra-stager"
+path = "src/bin/shikra-stager.rs"
+
+[dependencies]
+shikra-core.workspace = true
+shikra-crypto.workspace = true
+shikra-evasion.workspace = true
+shikra-obf.workspace = true
+shikra-proto.workspace = true
+shikra-transport.workspace = true
+anyhow.workspace = true
+base64.workspace = true
+clap.workspace = true
+prost.workspace = true
+quinn.workspace = true
+rand.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+rustls-pemfile.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+time.workspace = true
+tokio.workspace = true
+tower = { workspace = true, features = ["util"] }
+hyper-util.workspace = true
+tokio-stream.workspace = true
+tonic.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+wasmi.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = [
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemInformation",
+    "Win32_UI_WindowsAndMessaging",
+] }
+winreg.workspace = true
+
+[dev-dependencies]
+wat.workspace = true

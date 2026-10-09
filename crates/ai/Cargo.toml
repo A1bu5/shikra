@@ -1,0 +1,22 @@
+[package]
+name = "shikra-ai"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shikra C2 AI agentic loop and provider abstraction"
+
+[lints]
+workspace = true
+
+[dependencies]
+shikra-core.workspace = true
+async-trait.workspace = true
+reqwest = { workspace = true, features = ["json"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true

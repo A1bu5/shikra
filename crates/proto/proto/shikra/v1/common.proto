@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package shikra.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message Empty {}
+
+message VersionInfo {
+  string semver = 1;
+  string commit = 2;
+  string build_time = 3;
+}
+
+enum Platform {
+  PLATFORM_UNSPECIFIED = 0;
+  PLATFORM_WINDOWS = 1;
+  PLATFORM_LINUX = 2;
+  PLATFORM_MACOS = 3;
+}
+
+enum Architecture {
+  ARCHITECTURE_UNSPECIFIED = 0;
+  ARCHITECTURE_X86_64 = 1;
+  ARCHITECTURE_AARCH64 = 2;
+}
+
+enum SessionKind {
+  SESSION_KIND_UNSPECIFIED = 0;
+  SESSION_KIND_SESSION = 1;
+  SESSION_KIND_BEACON = 2;
+  SESSION_KIND_EXTERNAL = 3;
+}
+
+enum SessionStatus {
+  SESSION_STATUS_UNSPECIFIED = 0;
+  SESSION_STATUS_ACTIVE = 1;
+  SESSION_STATUS_STALE = 2;
+  SESSION_STATUS_DEAD = 3;
+}
+
+enum TaskState {
+  TASK_STATE_UNSPECIFIED = 0;
+  TASK_STATE_PENDING = 1;
+  TASK_STATE_DISPATCHED = 2;
+  TASK_STATE_RUNNING = 3;
+  TASK_STATE_COMPLETED = 4;
+  TASK_STATE_FAILED = 5;
+  TASK_STATE_CANCELLED = 6;
+}
+
+message SessionInfo {
+  string id = 1;
+  string engagement_id = 2;
+  SessionKind kind = 3;
+  SessionStatus status = 4;
+  Platform platform = 5;
+  Architecture architecture = 6;
+  string hostname = 7;
+  string username = 8;
+  string process_name = 9;
+  string remote_addr = 10;
+  google.protobuf.Timestamp first_seen = 11;
+  google.protobuf.Timestamp last_seen = 12;
+  uint64 killdate_unix = 13;
+  string working_hours = 14;
+  /// Operator-facing color tag (hex) and manual status override.
+  string color = 15;
+  string operator_status = 16;
+}
+
+message TaskRequest {
+  string session_id = 1;
+  string command = 2;
+  bytes args = 3;
+  bytes payload = 4;
+}
+
+message TaskResult {
+  string task_id = 1;
+  string session_id = 2;
+  TaskState state = 3;
+  int32 exit_code = 4;
+  bytes output = 5;
+  google.protobuf.Timestamp completed_at = 6;
+}
+
+message Envelope {
+  uint32 version = 1;
+  string session_id = 2;
+  uint64 sequence = 3;
+  bytes nonce = 4;
+  bytes ciphertext = 5;
+}
+
+message CheckInRequest {
+  bytes identity_public = 1;
+  bytes kex_public = 2;
+  bytes identity_signature = 3;
+  string hostname = 4;
+  string username = 5;
+  Platform platform = 6;
+  Architecture architecture = 7;
+  string process_name = 8;
+  SessionKind kind = 9;
+  string enrollment_token = 10;
+  /// Unix seconds after which the agent terminates (0 = never).
+  uint64 killdate_unix = 11;
+  /// Agent-local working-hours window, e.g. "9:00-17:00" (empty = always).
+  string working_hours = 12;
+}
+
+message CheckInResponse {
+  string session_id = 1;
+  string engagement_id = 2;
+  bytes server_kex_public = 3;
+  bytes server_identity_public = 4;
+  bytes server_signature = 5;
+  google.protobuf.Timestamp server_time = 6;
+  uint64 heartbeat_interval_secs = 7;
+}
+
+message AgentTask {
+  string task_id = 1;
+  string kind = 2;
+  bytes args = 3;
+  bytes payload = 4;
+}
+
+message AgentTaskBatch {
+  repeated AgentTask tasks = 1;
+}
+
+message AgentResultBatch {
+  repeated AgentResult results = 1;
+}
+
+message AgentResult {
+  string task_id = 1;
+  int32 exit_code = 2;
+  bytes stdout = 3;
+  bytes stderr = 4;
+}
+
+message AgentHeartbeat {
+  uint64 unix_ms = 1;
+}
+
+message TunnelOpen {
+  string tunnel_id = 1;
+  string host = 2;
+  uint32 port = 3;
+}
+
+message TunnelData {
+  string tunnel_id = 1;
+  bytes data = 2;
+}
+
+message TunnelClose {
+  string tunnel_id = 1;
+  string reason = 2;
+}
+
+message TunnelAccept {
+  string tunnel_id = 1;
+  string remote_addr = 2;
+  string bind = 3;
+}
+
+message AgentMessage {
+  oneof body {
+    AgentTask task = 1;
+    AgentResult result = 2;
+    AgentHeartbeat heartbeat = 3;
+    AgentTaskBatch tasks = 4;
+    AgentResultBatch results = 5;
+    TunnelOpen tunnel_open = 6;
+    TunnelData tunnel_data = 7;
+    TunnelClose tunnel_close = 8;
+    TunnelAccept tunnel_accept = 9;
+  }
+}
