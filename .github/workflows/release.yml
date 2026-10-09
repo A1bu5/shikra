@@ -171,7 +171,28 @@ jobs:
           workspaces: gui
       - name: Build console
         working-directory: gui
-        run: cargo build --release --locked --target ${{ matrix.target }}
+        env:
+          RUST_BACKTRACE: "1"
+        run: |
+          set -o pipefail
+          attempt=1
+          while [ "$attempt" -le 2 ]; do
+            if cargo build --release --locked --target ${{ matrix.target }} > "/tmp/gui.$attempt.log" 2>&1; then
+              exit 0
+            fi
+            sed -e 's/\x1b\[[0-9;]*m//g' "/tmp/gui.$attempt.log" > "/tmp/gui.$attempt.clean" || true
+            echo "::warning::GUI build attempt $attempt failed on ${{ matrix.label }}"
+            attempt=$((attempt + 1))
+          done
+          clean=/tmp/gui.$((attempt - 1)).clean
+          { grep -aE "^error|error\[|panicked at|signal:|SIGKILL|SIGSEGV|did not exit successfully" "$clean" || true; } \
+            | head -15 \
+            | while IFS= read -r line; do echo "::error::$line"; done
+          { df -h || true; } \
+            | while IFS= read -r line; do echo "::error::disk: $line"; done
+          { tail -12 "$clean" || true; } \
+            | while IFS= read -r line; do echo "::error::log tail: $line"; done
+          exit 1
       - name: Package (Unix)
         if: runner.os != 'Windows'
         shell: bash
