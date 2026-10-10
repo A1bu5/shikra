@@ -52,15 +52,36 @@ agile hawk.)*
 
 ## 🖥️ Operator console
 
-The console talks gRPC to the teamserver, renders sessions with live health
-state, and drives the whole task surface. Interface preview with demo data:
+The console is a three-zone workbench: a grouped navigation rail
+(operations / build / team / assistant), a table-first sessions workspace
+with live health and a details panel, and a persistent status bar
+(connection, session and listener counts, endpoint, clock). Double-click a
+session — or press **Interact** — to open its workspace with terminal, file,
+process, task and tunnel panes.
 
 <p align="center">
-  <img src="docs/assets/console-sessions.png" alt="Shikra Console — session list and terminal" width="100%">
+  <img src="docs/assets/console-sessions.png" alt="Sessions workbench — table, health and details panel" width="100%">
 </p>
 
 <p align="center">
-  <img src="docs/assets/console-terminal.png" alt="Shikra Console — running a task through an encrypted session" width="100%">
+  <img src="docs/assets/console-session.png" alt="Session workspace — terminal, files, processes, tasks, tunnels" width="100%">
+</p>
+
+**Guardrails by default.** Irreversible actions (stopping listeners,
+cancelling tasks, marking sessions dead, stopping the teamserver or the
+embedded database, reflective DLL loads, script deletion) ask for explicit
+confirmation; session-scoped controls stay disabled until a session is
+selected, and every list has a real empty state instead of a broken view.
+
+<p align="center">
+  <img src="docs/assets/console-confirm.png" alt="Confirmation guardrail for a destructive action" width="64%">
+</p>
+
+Listeners get their own view with contextual actions and one-click payload
+wiring:
+
+<p align="center">
+  <img src="docs/assets/console-listeners.png" alt="Listener management with contextual actions" width="100%">
 </p>
 
 <p align="center">

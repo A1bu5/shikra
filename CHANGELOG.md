@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Console workbench redesign** — grouped navigation rail (operations,
+  build, team, assistant), a table-first sessions workspace with health,
+  filtering and a live details panel, a dedicated session workspace
+  (terminal / files / processes / tasks / tunnels), a persistent status bar
+  and honest empty states throughout.
+- **Guardrails** — destructive actions (stopping listeners, cancelling
+  tasks, marking sessions dead, stopping the teamserver or the embedded
+  database, reflective DLL loads, deleting scripts) now require an explicit
+  confirmation dialog, session-scoped controls are disabled until a session
+  is selected, and file/process views tolerate empty or failed responses
+  instead of throwing.
+
 ## [0.1.1] - 2026-10-10
 
 ### Added

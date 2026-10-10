@@ -135,6 +135,8 @@ function setConnected(online, label) {
   status.textContent = label;
   status.classList.toggle("online", online);
   status.classList.toggle("offline", !online);
+  const barDot = document.querySelector("#status-conn .dot");
+  if (barDot) barDot.classList.toggle("offline", !online);
 }
 
 async function safeInvoke(command, args = {}) {
@@ -319,6 +321,7 @@ $("btn-db-start").addEventListener("click", async () => {
 
 $("btn-db-stop").addEventListener("click", async () => {
   if (dbMode() !== "embedded") return;
+  if (!(await confirmAction({ body: t("confirm.stopDatabase") }))) return;
   try {
     toast(await invoke("database_embedded_stop"));
     state.embeddedDbUrl = null;
@@ -370,6 +373,7 @@ $("btn-host-start").addEventListener("click", async () => {
 });
 
 $("btn-host-stop").addEventListener("click", async () => {
+  if (!(await confirmAction({ body: t("confirm.stopServer") }))) return;
   try {
     toast(await invoke("server_stop"));
     refreshServerStatus();
@@ -486,6 +490,8 @@ $("btn-login-connect").addEventListener("click", async () => {
   try {
     const version = await invoke("connect", { server, caPath, token });
     setConnected(true, t("msg.onlineVersion", { version }));
+    const serverLabel = $("status-server");
+    if (serverLabel) serverLabel.textContent = server;
     hideLogin();
     await saveConsoleConfig();
     await refreshSessions();
@@ -581,67 +587,147 @@ async function refreshSessions() {
 }
 
 function renderSessions(sessions) {
-  const list = $("session-list");
+  state.sessions = sessions;
   const showDead = $("show-dead").checked;
+  const filter = ($("session-filter")?.value ?? "").trim().toLowerCase();
   const visible = sessions
     .filter((session) => showDead || session.status !== "dead")
+    .filter(
+      (session) =>
+        !filter ||
+        `${session.hostname} ${session.username} ${session.id} ${session.platform}`
+          .toLowerCase()
+          .includes(filter)
+    )
     .sort((a, b) => sessionSortKey(a).localeCompare(sessionSortKey(b)));
-  list.innerHTML = "";
-  if (!visible.length) {
-    const empty = document.createElement("li");
-    empty.textContent = t("sessions.empty");
-    empty.style.color = "var(--muted)";
-    empty.style.cursor = "default";
-    list.appendChild(empty);
-    return;
-  }
+
+  const body = $("session-table-body");
+  body.innerHTML = "";
   for (const session of visible) {
-    const li = document.createElement("li");
     const health = sessionHealth(session);
-    li.className = `session-item ${session.status} health-${health}`;
-    if (session.color) {
-      li.style.borderLeft = `3px solid ${session.color}`;
-    }
+    const tr = document.createElement("tr");
     if (state.activeSession && state.activeSession.id === session.id) {
-      li.classList.add("active");
+      tr.classList.add("selected");
     }
-    li.innerHTML = `
-      <div class="session-icon platform-${session.platform}">${platformIcon(session.platform)}</div>
-      <div class="session-body">
-        <div class="session-host">
-          <span class="session-dot ${health === "healthy" ? "active" : health}"></span>
-          <strong>${session.hostname || t("sessions.unknownHost")}</strong>
-          <span class="session-user">${session.username || "?"}</span>
-        </div>
-        <div class="session-meta">
-          <span class="badge ${session.kind}">${session.kind}</span>
-          <span class="badge health-badge ${health}">${healthLabel(health)}</span>
-          <span class="badge">${session.architecture}</span>
-          <span class="session-seen">${timeAgo(session.last_seen_unix)}</span>
-        </div>
-        <div class="session-addr">${session.remote_addr || t("sessions.noAddress")}</div>
-      </div>
+    if (session.color) {
+      tr.style.boxShadow = `inset 3px 0 0 ${session.color}`;
+    }
+    tr.innerHTML = `
+      <td>
+        <div class="cell-host"><span class="platform-${session.platform}">${platformIcon(session.platform)}</span><span>${copilotEscape(session.hostname || t("sessions.unknownHost"))}</span></div>
+        <div class="cell-mono">${copilotEscape(session.id.slice(0, 8))}</div>
+      </td>
+      <td>${copilotEscape(session.username || "?")}</td>
+      <td class="cell-mono">${copilotEscape(session.platform)} / ${copilotEscape(session.architecture)}</td>
+      <td><span class="kind-pill ${copilotEscape(session.kind)}">${copilotEscape(session.kind)}</span></td>
+      <td><span class="health-pill ${health}"><span class="health-dot"></span>${healthLabel(health)}</span></td>
+      <td>${timeAgo(session.last_seen_unix)}</td>
+      <td class="cell-mono">${copilotEscape(session.remote_addr || t("sessions.noAddress"))}</td>
     `;
-    li.addEventListener("click", () => {
-      state.activeSession = session;
-      renderSessions(state.sessions ?? sessions);
-      renderActiveSession();
-    });
-    li.addEventListener("contextmenu", (event) => showSessionMenu(event, session));
-    list.appendChild(li);
+    tr.addEventListener("click", () => selectSession(session));
+    tr.addEventListener("dblclick", () => openSessionWorkspace(session));
+    tr.addEventListener("contextmenu", (event) => showSessionMenu(event, session));
+    body.appendChild(tr);
   }
+  $("session-count").textContent = t("sessions.count", { n: visible.length });
+  $("sessions-empty").classList.toggle("hidden", visible.length > 0);
+  const badge = $("badge-sessions");
+  if (badge) {
+    const activeCount = sessions.filter((session) => session.status !== "dead").length;
+    badge.textContent = activeCount || "";
+  }
+  updateStatusBar();
 }
+
+function selectSession(session) {
+  state.activeSession = session;
+  renderSessions(state.sessions ?? []);
+  renderActiveSession();
+}
+
+$("session-filter").addEventListener("input", () => renderSessions(state.sessions ?? []));
 
 $("show-dead").addEventListener("change", () => renderSessions(state.sessions ?? []));
 
 function renderActiveSession() {
-  const el = $("active-session");
-  if (!state.activeSession) {
-    el.textContent = t("session.none");
+  const session = state.activeSession;
+  const details = $("session-details-body");
+  const title = $("session-head-title");
+  const meta = $("session-head-meta");
+  const actions = $("session-head-actions");
+  if (!session) {
+    details.innerHTML = `<p class="muted">${t("detail.select")}</p>`;
+    title.textContent = t("session.none");
+    meta.innerHTML = "";
+    actions.innerHTML = "";
+    updateSessionControls();
     return;
   }
-  const s = state.activeSession;
-  el.innerHTML = `<strong>${s.hostname}</strong> · ${s.username} · ${s.platform}/${s.architecture} · ${s.id}`;
+  const health = sessionHealth(session);
+  const rows = [
+    ["Host", session.hostname || t("sessions.unknownHost")],
+    ["User", session.username || "?"],
+    ["Platform", `${session.platform} / ${session.architecture}`],
+    ["Kind", session.kind],
+    ["Health", healthLabel(health)],
+    ["Last seen", timeAgo(session.last_seen_unix)],
+    ["Address", session.remote_addr || t("sessions.noAddress")],
+    ["Session ID", session.id],
+  ];
+  details.innerHTML =
+    rows
+      .map(
+        ([key, value]) =>
+          `<div class="detail-row"><span class="k">${copilotEscape(key)}</span><span class="v">${copilotEscape(String(value))}</span></div>`
+      )
+      .join("") +
+    `<div class="detail-actions">
+       <button class="primary" id="detail-interact">${t("detail.interact")}</button>
+       <button class="ghost" id="detail-export">${t("session.export")}</button>
+       <button class="ghost" id="detail-color">${t("session.color")}</button>
+     </div>`;
+  details.querySelector("#detail-interact").addEventListener("click", () => openSessionWorkspace(session));
+  details.querySelector("#detail-export").addEventListener("click", () => exportSession(session));
+  details.querySelector("#detail-color").addEventListener("click", (event) => showSessionMenu(event, session));
+
+  title.innerHTML = `${platformIcon(session.platform)} ${copilotEscape(session.hostname || t("sessions.unknownHost"))}`;
+  meta.innerHTML = `
+    <span>${copilotEscape(session.username || "?")}</span>
+    <span>·</span>
+    <span>${copilotEscape(session.platform)}/${copilotEscape(session.architecture)}</span>
+    <span>·</span>
+    <span class="kind-pill ${copilotEscape(session.kind)}">${copilotEscape(session.kind)}</span>
+    <span>·</span>
+    <span class="health-pill ${health}"><span class="health-dot"></span>${healthLabel(health)}</span>
+    <span>·</span>
+    <span>${timeAgo(session.last_seen_unix)}</span>`;
+
+  const nextStatus = session.status === "dead" ? "alive" : "dead";
+  actions.innerHTML = `
+    <button class="ghost" id="session-mark">${nextStatus === "dead" ? t("session.markDead") : t("session.markAlive")}</button>
+    <button class="ghost" id="session-close-workspace">${t("session.close")}</button>`;
+  actions.querySelector("#session-close-workspace").addEventListener("click", closeSessionWorkspace);
+  actions.querySelector("#session-mark").addEventListener("click", async () => {
+    if (nextStatus === "dead" && !(await confirmAction({ body: t("confirm.markDead", { host: session.hostname }) }))) {
+      return;
+    }
+    await applySessionUi(session.id, "", nextStatus);
+  });
+  updateSessionControls();
+}
+
+function updateSessionControls() {
+  const hasSession = !!state.activeSession;
+  const runBtn = $("btn-run-command");
+  const commandInput = $("terminal-command");
+  if (runBtn) runBtn.disabled = !hasSession;
+  if (commandInput) commandInput.disabled = !hasSession;
+}
+
+function updateStatusBar() {
+  const count = (state.sessions ?? []).filter((session) => session.status !== "dead").length;
+  const element = $("status-sessions");
+  if (element) element.textContent = t("status.sessions", { n: count });
 }
 
 $("btn-refresh").addEventListener("click", refreshSessions);
@@ -760,6 +846,10 @@ async function listFiles() {
     sessionId: state.activeSession.id,
     path,
   });
+  if (!Array.isArray(entries)) {
+    toast(t("files.listFailed"), true);
+    return;
+  }
   const rows = $("file-rows");
   rows.innerHTML = "";
   for (const entry of entries) {
@@ -1310,41 +1400,146 @@ function loadTeam() {
   loadCanaries();
 }
 
-// ---------- tabs ----------
+// ---------- navigation ----------
 
-document.querySelectorAll(".tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-    document.querySelectorAll(".tab-page").forEach((p) => p.classList.remove("active"));
-    tab.classList.add("active");
-    $(`tab-${tab.dataset.tab}`).classList.add("active");
-    if (tab.dataset.tab === "files") listFiles();
-    if (tab.dataset.tab === "team") {
-      loadTeam();
-      loadWebhook();
-    }
-    if (tab.dataset.tab === "payload") {
-      refreshBuilderDefaults();
-      refreshBuildListeners();
-    }
-    if (tab.dataset.tab === "listen") loadListeners();
-    if (tab.dataset.tab === "processes") loadProcesses();
-    if (tab.dataset.tab === "tasks") loadTasks();
-    if (tab.dataset.tab === "graph") renderGraph();
-    if (tab.dataset.tab === "chat") {
-      loadChat();
-      clearInterval(chatTimer);
-      chatTimer = setInterval(loadChat, 5000);
-    } else {
-      clearInterval(chatTimer);
-      chatTimer = null;
-    }
-    if (tab.dataset.tab === "events") loadEvents();
-    if (tab.dataset.tab === "scripts") loadScripts();
-    if (tab.dataset.tab === "profiles") loadProfiles();
-    if (tab.dataset.tab === "copilot") loadCopilot();
+const VIEW_TARGETS = {
+  sessions: "view-sessions",
+  session: "view-session",
+  "tab-listen": "tab-listen",
+  "tab-payload": "tab-payload",
+  "tab-profiles": "tab-profiles",
+  "tab-extensions": "tab-extensions",
+  "tab-scripts": "tab-scripts",
+  "tab-graph": "tab-graph",
+  "tab-team": "tab-team",
+  "tab-events": "tab-events",
+  "tab-chat": "tab-chat",
+  "tab-copilot": "tab-copilot",
+};
+
+const SUBTAB_TARGETS = {
+  terminal: "tab-terminal",
+  files: "tab-files",
+  processes: "tab-processes",
+  tasks: "tab-tasks",
+  tunnels: "tab-tunnels",
+};
+
+function showView(view) {
+  const target = VIEW_TARGETS[view] ?? view;
+  document.querySelectorAll(".rail-item").forEach((item) => {
+    item.classList.toggle("active", item.dataset.view === view);
+  });
+  document.querySelectorAll(".stage > .tab-page").forEach((pane) => {
+    pane.classList.toggle("active", pane.id === target);
+  });
+  state.currentView = view;
+  if (view === "sessions") refreshSessions().catch(() => {});
+  if (view === "tab-listen") loadListeners();
+  if (view === "tab-team") {
+    loadTeam();
+    loadWebhook();
+  }
+  if (view === "tab-payload") {
+    refreshBuilderDefaults();
+    refreshBuildListeners();
+  }
+  if (view === "tab-graph") renderGraph();
+  if (view === "tab-chat") {
+    loadChat();
+    clearInterval(chatTimer);
+    chatTimer = setInterval(loadChat, 5000);
+  } else {
+    clearInterval(chatTimer);
+    chatTimer = null;
+  }
+  if (view === "tab-events") loadEvents();
+  if (view === "tab-scripts") loadScripts();
+  if (view === "tab-profiles") loadProfiles();
+  if (view === "tab-copilot") loadCopilot();
+}
+
+function showSessionTab(subtab) {
+  const target = SUBTAB_TARGETS[subtab] ?? subtab;
+  document.querySelectorAll(".subtab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.subtab === subtab);
+  });
+  document.querySelectorAll(".substage > .tab-page").forEach((pane) => {
+    pane.classList.toggle("active", pane.id === target);
+  });
+  state.sessionTab = subtab;
+  if (subtab === "files") listFiles();
+  if (subtab === "processes") loadProcesses();
+  if (subtab === "tasks") loadTasks();
+}
+
+document.querySelectorAll(".rail-item").forEach((item) => {
+  item.addEventListener("click", () => {
+    showView(item.dataset.view);
   });
 });
+
+document.querySelectorAll(".subtab").forEach((tab) => {
+  tab.addEventListener("click", () => showSessionTab(tab.dataset.subtab));
+});
+
+function openSessionWorkspace(session) {
+  if (!session) {
+    toast(t("msg.selectSession"), true);
+    return;
+  }
+  state.activeSession = session;
+  renderSessions(state.sessions ?? []);
+  renderActiveSession();
+  showView("session");
+  showSessionTab(state.sessionTab ?? "terminal");
+}
+
+function closeSessionWorkspace() {
+  showView("sessions");
+}
+
+function confirmAction({
+  title = t("confirm.title"),
+  body = "",
+  ok = t("confirm.confirm"),
+  danger = true,
+} = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal ${danger ? "danger" : ""}">
+        <div class="modal-title">${copilotEscape(title)}</div>
+        <div class="modal-body">${copilotEscape(body)}</div>
+        <div class="modal-actions">
+          <button class="ghost" id="modal-cancel">${copilotEscape(t("confirm.cancel"))}</button>
+          <button class="${danger ? "danger" : "primary"}" id="modal-ok">${copilotEscape(ok)}</button>
+        </div>
+      </div>`;
+    const finish = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+    overlay.querySelector("#modal-cancel").addEventListener("click", () => finish(false));
+    overlay.querySelector("#modal-ok").addEventListener("click", () => finish(true));
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) finish(false);
+    });
+    document.addEventListener("keydown", function onKey(event) {
+      if (event.key === "Escape") {
+        document.removeEventListener("keydown", onKey);
+        finish(false);
+      }
+    });
+    document.body.appendChild(overlay);
+  });
+}
+
+setInterval(() => {
+  const clock = $("status-clock");
+  if (clock) clock.textContent = new Date().toLocaleTimeString();
+}, 1000);
 
 // ---------- native file pickers ----------
 
@@ -1506,7 +1701,8 @@ $("btn-script-new").addEventListener("click", () => {
 
 $("btn-script-delete").addEventListener("click", async () => {
   const name = $("script-name").value.trim();
-  if (!name || !window.confirm(t("scripts.confirmDelete", { name }))) return;
+  if (!name) return;
+  if (!(await confirmAction({ body: t("scripts.confirmDelete", { name }) }))) return;
   try {
     await invoke("scripts_delete", { name });
     $("script-name").value = "";
@@ -1686,8 +1882,11 @@ function showSessionMenu(event, session) {
       hideSessionMenu();
       const action = item.dataset.action;
       if (action === "clear-color") await applySessionUi(session.id, "", "");
-      else if (action === "dead") await applySessionUi(session.id, "", "dead");
-      else if (action === "alive") await applySessionUi(session.id, "", "alive");
+      else if (action === "dead") {
+        if (await confirmAction({ body: t("confirm.markDead", { host: session.hostname }) })) {
+          await applySessionUi(session.id, "", "dead");
+        }
+      } else if (action === "alive") await applySessionUi(session.id, "", "alive");
       else if (action === "export") await exportSession(session);
     });
   });
@@ -1737,8 +1936,8 @@ async function loadProcesses() {
     kind: "procs",
     args: {},
   });
-  if (result.exit_code !== 0) {
-    toast(result.output.trim() || t("procs.failed"), true);
+  if (!result || result.exit_code !== 0) {
+    toast(result?.output?.trim() || t("procs.failed"), true);
     return;
   }
   try {
@@ -1843,6 +2042,9 @@ $("btn-reflect-dll").addEventListener("click", async () => {
   }
   const file = await pickFile(t("procs.reflectPick"));
   if (!file) return;
+  if (!(await confirmAction({ body: t("confirm.reflectDll", { file: file.split("/").pop() }) }))) {
+    return;
+  }
   try {
     const result = await invoke("reflect_dll", {
       sessionId: state.activeSession.id,
@@ -1860,6 +2062,9 @@ $("procs-tree").addEventListener("change", renderProcesses);
 
 async function cancelTask(taskId) {
   if (!state.activeSession) return;
+  if (!(await confirmAction({ body: t("confirm.cancelTask", { id: taskId.slice(0, 8) }) }))) {
+    return;
+  }
   try {
     toast(await invoke("task_cancel", {
       sessionId: state.activeSession.id,
@@ -2022,6 +2227,10 @@ async function loadListeners() {
   const list = $("listener-list");
   try {
     const listeners = await invoke("listeners");
+    const badge = $("badge-listeners");
+    if (badge) badge.textContent = listeners.length || "";
+    const statusListeners = $("status-listeners");
+    if (statusListeners) statusListeners.textContent = t("status.listeners", { n: listeners.length });
     list.innerHTML = "";
     if (!listeners.length) {
       list.innerHTML = `<p class="muted">${t("listen.empty")}</p>`;
@@ -2032,10 +2241,10 @@ async function loadListeners() {
       card.className = "listener-row";
       card.innerHTML = `
         <div class="listener-main">
-          <span class="listener-kind">${listener.kind}</span>
-          <code>${listener.addr}</code>
+          <span class="listener-kind">${copilotEscape(listener.kind)}</span>
+          <code>${copilotEscape(listener.addr)}</code>
           <span class="session-dot active"></span>
-          <span class="muted listener-detail">${listener.detail || ""}</span>
+          <span class="muted listener-detail">${copilotEscape(listener.detail || "")}</span>
         </div>
         <div class="listener-actions">
           <button class="ghost use-btn">${t("listen.useForPayload")}</button>
@@ -2058,6 +2267,13 @@ async function loadListeners() {
         toast(t("listen.copied", { kind: listener.kind }));
       });
       card.querySelector(".stop-btn").addEventListener("click", async () => {
+        if (
+          !(await confirmAction({
+            body: t("confirm.stopListener", { kind: listener.kind, addr: listener.addr }),
+          }))
+        ) {
+          return;
+        }
         try {
           toast(await invoke("listener_stop", { id: listener.id }));
           loadListeners();

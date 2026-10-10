@@ -113,141 +113,98 @@
   </div>
 
   <div id="app" class="hidden">
-    <aside class="sidebar">
-      <div class="brand">
+    <header class="appbar">
+      <div class="appbar-brand">
         <span class="logo">◈</span>
         <div>
           <div class="brand-name">SHIKRA</div>
           <div class="brand-sub" data-i18n="app.brandSub">operator console</div>
         </div>
       </div>
-
-      <section class="panel grow">
-        <h3>
-          <span data-i18n="sessions.title">Sessions</span>
-          <div class="session-controls">
-            <label class="check tiny" data-i18n-title="sessions.showDeadTitle" title="Show dead sessions">
-              <input id="show-dead" type="checkbox" /> <span data-i18n="sessions.dead">dead</span>
-            </label>
-            <button id="btn-refresh" class="ghost" data-i18n-title="common.refresh" title="Refresh">⟳</button>
-          </div>
-        </h3>
-        <ul id="session-list" class="session-list"></ul>
-      </section>
-    </aside>
-
-    <main class="workspace">
-      <header class="topbar">
-        <div id="active-session" class="active-session" data-i18n="session.none">no session selected</div>
-        <div class="topbar-actions">
-          <span id="conn-status" class="status online" data-i18n="top.online">online</span>
-          <button id="btn-settings" class="ghost" data-i18n-title="top.settings" title="Connection settings">⚙</button>
-          <button id="btn-disconnect" class="ghost" data-i18n="top.disconnect">Disconnect</button>
+      <div class="appbar-actions">
+        <span id="conn-status" class="status online" data-i18n="top.online">online</span>
+        <button id="btn-settings" class="ghost" data-i18n-title="top.settings" title="Connection settings">⚙</button>
+        <button id="btn-disconnect" class="ghost" data-i18n="top.disconnect">Disconnect</button>
+      </div>
+    </header>
+    <div class="shell">
+      <nav class="rail">
+        <div class="rail-group">
+          <div class="rail-title" data-i18n="nav.groupOps">Operations</div>
+          <button class="rail-item active" data-view="sessions"><span class="rail-ico">▦</span><span data-i18n="sessions.title">Sessions</span><span class="rail-badge" id="badge-sessions"></span></button>
+          <button class="rail-item" data-view="tab-listen"><span class="rail-ico">⇄</span><span data-i18n="tab.listen">Listeners</span><span class="rail-badge" id="badge-listeners"></span></button>
+          <button class="rail-item" data-view="tab-graph"><span class="rail-ico">⚉</span><span data-i18n="nav.graphTitle">Session graph</span></button>
         </div>
-        <nav class="tabs">
-          <button data-tab="copilot" class="tab">✦ Copilot</button>
-          <button data-tab="terminal" class="tab active" data-i18n="tab.terminal">Terminal</button>
-          <button data-tab="files" class="tab" data-i18n="tab.files">Files</button>
-          <button data-tab="processes" class="tab" data-i18n="tab.processes">Processes</button>
-          <button data-tab="tasks" class="tab" data-i18n="tab.tasks">Tasks</button>
-          <button data-tab="listen" class="tab" data-i18n="tab.listen">Listeners</button>
-          <button data-tab="payload" class="tab" data-i18n="tab.payload">Payload</button>
-          <button data-tab="profiles" class="tab" data-i18n="tab.profiles">Profiles</button>
-          <button data-tab="extensions" class="tab" data-i18n="tab.extensions">Extensions</button>
-          <button data-tab="tunnels" class="tab" data-i18n="tab.tunnels">Tunnels</button>
-          <button data-tab="graph" class="tab" data-i18n="tab.graph">Graph</button>
-          <button data-tab="chat" class="tab" data-i18n="tab.chat">Chat</button>
-          <button data-tab="events" class="tab" data-i18n="tab.events">Events</button>
-          <button data-tab="scripts" class="tab" data-i18n="tab.scripts">Scripts</button>
-          <button data-tab="team" class="tab" data-i18n="tab.team">Team</button>
-        </nav>
-      </header>
-
-      <section id="tab-copilot" class="tab-page">
-        <div class="copilot-layout">
-          <div class="copilot-main">
-            <header class="copilot-head">
-              <div class="copilot-identity">
-                <span class="copilot-orb"></span>
-                <div>
-                  <div class="copilot-title" data-i18n="ai.title">Shikra Copilot</div>
-                  <div id="copilot-subtitle" class="copilot-subtitle" data-i18n="ai.subtitle">agentic operator · approval gate</div>
-                </div>
-              </div>
-              <div class="copilot-meta">
-                <span id="copilot-model-pill" class="pill muted" data-i18n="ai.notConfigured">not configured</span>
-                <span id="copilot-key-pill" class="pill muted"></span>
-                <button id="btn-copilot-reset" class="ghost" data-i18n="ai.reset">New chat</button>
-              </div>
-            </header>
-
-            <div id="copilot-messages" class="copilot-messages"></div>
-
-            <div class="copilot-empty" id="copilot-empty">
-              <div class="copilot-empty-orb"><span></span></div>
-              <h2 data-i18n="ai.emptyTitle">Ask the copilot to work the engagement</h2>
-              <p data-i18n="ai.emptyBody">It plans step by step, calls tools through the approval gate, and reports what it actually ran.</p>
-              <div class="copilot-suggestions">
-                <button data-prompt="Triage the first session: identity, OS version, architecture and network interfaces." data-i18n="ai.suggest1">Triage first session</button>
-                <button data-prompt="List the running listeners, active pivots and the five most recent tasks." data-i18n="ai.suggest2">Fleet status</button>
-                <button data-prompt="Run a TCP connect scan on 127.0.0.1 for ports 22,80,443,8443 on the first session." data-i18n="ai.suggest3">Port scan</button>
-                <button data-prompt="Capture a screenshot of the first session and tell me where the file was saved." data-i18n="ai.suggest4">Screenshot</button>
+        <div class="rail-group">
+          <div class="rail-title" data-i18n="nav.groupBuild">Build</div>
+          <button class="rail-item" data-view="tab-payload"><span class="rail-ico">◆</span><span data-i18n="tab.payload">Payload</span></button>
+          <button class="rail-item" data-view="tab-profiles"><span class="rail-ico">◐</span><span data-i18n="tab.profiles">Profiles</span></button>
+          <button class="rail-item" data-view="tab-extensions"><span class="rail-ico">⬡</span><span data-i18n="tab.extensions">Extensions</span></button>
+          <button class="rail-item" data-view="tab-scripts"><span class="rail-ico">⌘</span><span data-i18n="tab.scripts">Scripts</span></button>
+        </div>
+        <div class="rail-group">
+          <div class="rail-title" data-i18n="nav.groupTeam">Team</div>
+          <button class="rail-item" data-view="tab-team"><span class="rail-ico">♟</span><span data-i18n="tab.team">Team</span></button>
+          <button class="rail-item" data-view="tab-events"><span class="rail-ico">≣</span><span data-i18n="tab.events">Events</span></button>
+          <button class="rail-item" data-view="tab-chat"><span class="rail-ico">✉</span><span data-i18n="tab.chat">Chat</span></button>
+        </div>
+        <div class="rail-group">
+          <div class="rail-title" data-i18n="nav.groupAi">Assistant</div>
+          <button class="rail-item" data-view="tab-copilot"><span class="rail-ico">✦</span><span data-i18n="tab.copilot">Copilot</span></button>
+        </div>
+      </nav>
+      <div class="stage">
+        <section id="view-sessions" class="tab-page active">
+          <div class="view-toolbar">
+            <input id="session-filter" data-i18n-placeholder="sessions.filterPlaceholder" placeholder="filter host, user or id…" spellcheck="false" />
+            <label class="check tiny" data-i18n-title="sessions.showDeadTitle" title="Show dead sessions"><input id="show-dead" type="checkbox" /> <span data-i18n="sessions.dead">dead</span></label>
+            <span class="muted" id="session-count"></span>
+            <span class="toolbar-spacer"></span>
+            <button id="btn-refresh" class="ghost" data-i18n="common.refresh">Refresh</button>
+          </div>
+          <div class="sessions-layout">
+            <div class="table-card grow">
+              <table class="data-table sessions-table">
+                <thead><tr>
+                  <th data-i18n="sessions.colHost">Host</th>
+                  <th data-i18n="sessions.colUser">User</th>
+                  <th data-i18n="sessions.colPlatform">Platform</th>
+                  <th data-i18n="sessions.colKind">Kind</th>
+                  <th data-i18n="sessions.colHealth">Health</th>
+                  <th data-i18n="sessions.colLast">Last seen</th>
+                  <th data-i18n="sessions.colAddress">Address</th>
+                </tr></thead>
+                <tbody id="session-table-body"></tbody>
+              </table>
+              <div class="empty-state hidden" id="sessions-empty">
+                <div class="empty-ico">▦</div>
+                <p data-i18n="sessions.emptyHint">No sessions yet. Implant check-ins appear here in real time.</p>
               </div>
             </div>
-
-            <div class="copilot-composer">
-              <textarea id="copilot-input" rows="1" data-i18n-placeholder="ai.placeholder" placeholder="Ask the copilot…  (Enter to send, Shift+Enter for a new line)" spellcheck="false"></textarea>
-              <button id="btn-copilot-send" class="primary" data-i18n="ai.send">Send</button>
-            </div>
-            <div class="copilot-status" id="copilot-status"></div>
+            <aside class="details-panel">
+              <h3 data-i18n="detail.title">Session details</h3>
+              <div id="session-details-body"><p class="muted" data-i18n="detail.select">Select a session to see details and actions.</p></div>
+            </aside>
           </div>
+        </section>
 
-          <aside class="copilot-rail">
-            <section class="panel">
-              <h3 data-i18n="ai.modelTitle">Model</h3>
-              <label><span data-i18n="ai.baseUrl">Provider URL</span>
-                <input id="copilot-base-url" placeholder="https://api.deepseek.com/v1" spellcheck="false" />
-              </label>
-              <label><span data-i18n="ai.model">Model</span>
-                <input id="copilot-model" placeholder="deepseek-flash" spellcheck="false" />
-              </label>
-              <label><span data-i18n="ai.apiKey">API key</span>
-                <input id="copilot-api-key" type="password" placeholder="sk-…" spellcheck="false" />
-              </label>
-              <div class="row tight">
-                <button id="btn-copilot-save" class="primary" data-i18n="ai.save">Save</button>
-                <span id="copilot-source-note" class="muted"></span>
-              </div>
-            </section>
-
-            <section class="panel">
-              <h3 data-i18n="ai.policyTitle">Approval gate</h3>
-              <label class="switch">
-                <input id="copilot-auto-approve" type="checkbox" />
-                <span class="switch-track"></span>
-                <span class="switch-label" data-i18n="ai.autoApprove">Auto-approve mutating tools (shell, upload)</span>
-              </label>
-              <label class="switch">
-                <input id="copilot-allow-destructive" type="checkbox" />
-                <span class="switch-track"></span>
-                <span class="switch-label" data-i18n="ai.allowDestructive">Auto-approve destructive tools (BOF, WASM, listeners)</span>
-              </label>
-              <div class="copilot-legend">
-                <span class="risk-dot read-only"></span><span data-i18n="ai.riskReadOnly">read-only — always allowed</span>
-                <span class="risk-dot mutating"></span><span data-i18n="ai.riskMutating">mutating — asks unless auto-approved</span>
-                <span class="risk-dot destructive"></span><span data-i18n="ai.riskDestructive">destructive — asks unless both enabled</span>
-              </div>
-            </section>
-
-            <section class="panel grow">
-              <h3 data-i18n="ai.toolsTitle">Tool surface</h3>
-              <div id="copilot-tools" class="copilot-tools"></div>
-            </section>
-          </aside>
-        </div>
-      </section>
-
-      <section id="tab-terminal" class="tab-page active">
+        <section id="view-session" class="tab-page view-session">
+          <header class="session-head">
+            <div class="session-head-main">
+              <div id="session-head-title" class="session-head-title" data-i18n="session.none">no session selected</div>
+              <div id="session-head-meta" class="session-head-meta"></div>
+            </div>
+            <div class="session-head-actions" id="session-head-actions"></div>
+          </header>
+          <nav class="subtabs">
+            <button class="subtab active" data-subtab="terminal" data-i18n="tab.terminal">Terminal</button>
+            <button class="subtab" data-subtab="files" data-i18n="tab.files">Files</button>
+            <button class="subtab" data-subtab="processes" data-i18n="tab.processes">Processes</button>
+            <button class="subtab" data-subtab="tasks" data-i18n="tab.tasks">Tasks</button>
+            <button class="subtab" data-subtab="tunnels" data-i18n="tab.tunnels">Tunnels</button>
+          </nav>
+          <div class="substage">
+      <section id="tab-terminal" class="tab-page">
         <div id="terminal-output" class="terminal-output"></div>
         <div class="terminal-input">
           <span class="prompt">$</span>
@@ -343,80 +300,64 @@
         <pre id="task-output" class="report-output"></pre>
       </section>
 
-      <section id="tab-graph" class="tab-page">
-        <div class="file-toolbar">
-          <button id="btn-graph-refresh" class="primary" data-i18n="graph.refresh">Refresh topology</button>
-          <span class="muted" data-i18n="graph.hint">Teamserver, sessions and pivot tunnels. Click a node to select the session.</span>
-        </div>
-        <div id="graph-canvas" class="graph-canvas"></div>
-      </section>
-
-      <section id="tab-extensions" class="tab-page">
+      <section id="tab-tunnels" class="tab-page">
         <div class="ext-grid">
           <div class="card">
-            <h3 data-i18n="ext.bofTitle">BOF (COFF)</h3>
-            <label><span data-i18n="ext.bofFile">Object file</span>
-              <div class="path-row">
-                <input id="bof-path" class="path-input" data-drop-label="BOF object" data-i18n-placeholder="ext.bofPlaceholder" placeholder="drag a .obj here" spellcheck="false" />
-                <button class="browse-btn" data-target="bof-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
-              </div>
+            <h3 data-i18n="tun.socks">SOCKS5 proxy</h3>
+            <label><span data-i18n="tun.listen">Listen address</span>
+              <input id="socks-listen" value="127.0.0.1:1080" spellcheck="false" />
             </label>
-            <label><span data-i18n="ext.args">Arguments</span>
-              <input id="bof-args" placeholder="arg1 arg2" spellcheck="false" />
-            </label>
-            <button id="btn-bof" class="primary" data-i18n="ext.bofRun">Execute BOF</button>
+            <button id="btn-socks" class="primary" data-i18n="tun.startSocks">Start SOCKS5</button>
           </div>
           <div class="card">
-            <h3 data-i18n="ext.wasmTitle">WASM extension</h3>
-            <label><span data-i18n="ext.name">Name</span>
-              <input id="wasm-name" placeholder="my-extension" spellcheck="false" />
+            <h3 data-i18n="tun.localFwd">Local port forward</h3>
+            <label><span data-i18n="tun.listen">Listen address</span>
+              <input id="portfwd-listen" value="127.0.0.1:8000" spellcheck="false" />
             </label>
-            <label><span data-i18n="ext.wasmFile">Module file</span>
-              <div class="path-row">
-                <input id="wasm-path" class="path-input" data-drop-label="WASM module" data-i18n-placeholder="ext.wasmPlaceholder" placeholder="drag a .wasm here" spellcheck="false" />
-                <button class="browse-btn" data-target="wasm-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
-              </div>
+            <label><span data-i18n="tun.targetAgent">Target (agent side)</span>
+              <input id="portfwd-target" value="127.0.0.1:80" spellcheck="false" />
             </label>
-            <label><span data-i18n="ext.args">Arguments</span>
-              <input id="wasm-args" placeholder="args" spellcheck="false" />
+            <button id="btn-portfwd" class="primary" data-i18n="tun.startFwd">Start forward</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="tun.remoteFwd">Remote port forward</h3>
+            <label><span data-i18n="tun.bindAgent">Bind (agent side)</span>
+              <input id="rport-bind" value="127.0.0.1:9000" spellcheck="false" />
             </label>
+            <label><span data-i18n="tun.targetServer">Target (server side)</span>
+              <input id="rport-to" value="127.0.0.1:80" spellcheck="false" />
+            </label>
+            <button id="btn-rport" class="primary" data-i18n="tun.startRport">Start rportfwd</button>
             <div class="row">
-              <button id="btn-wasm-load" data-i18n="common.load">Load</button>
-              <button id="btn-wasm-run" class="primary" data-i18n="common.run">Run</button>
-              <button id="btn-wasm-list" class="ghost" data-i18n="common.list">List</button>
+              <input id="rport-id" data-i18n-placeholder="tun.forwardId" placeholder="forward id to stop" spellcheck="false" />
+              <button id="btn-rport-stop" data-i18n="tun.stop">Stop</button>
             </div>
           </div>
           <div class="card">
-            <h3 data-i18n="ext.registryTitle">Registry push</h3>
-            <label><span data-i18n="ext.extName">Extension name</span>
-              <input id="registry-name" placeholder="hello" spellcheck="false" />
-            </label>
-            <button id="btn-registry-push" class="primary" data-i18n="ext.fetchLoad">Fetch + load</button>
-            <button id="btn-registry-list" class="ghost" data-i18n="ext.listRegistry">List registry</button>
-            <pre id="registry-output" class="terminal"></pre>
+            <h3 data-i18n="tun.pivots">Pivots</h3>
+            <button id="btn-pivots" class="primary" data-i18n="tun.listPivots">List pivots</button>
+            <pre id="pivots-output" class="terminal"></pre>
           </div>
           <div class="card">
-            <h3 data-i18n="ext.nativeTitle">Native extensions</h3>
-            <label><span data-i18n="ext.name">Name</span>
-              <input id="native-name" placeholder="hello" spellcheck="false" />
+            <h3 data-i18n="tun.scan">Port scan (agent side)</h3>
+            <label><span data-i18n="tun.scanTarget">Target</span>
+              <input id="scan-target" value="127.0.0.1" spellcheck="false" />
             </label>
-            <label><span data-i18n="ext.library">Library file (this machine, pushed to agent)</span>
-              <div class="path-row">
-                <input id="native-path" class="path-input" data-drop-label="native library" data-i18n-placeholder="ext.nativePlaceholder" placeholder="drag a .so/.dll/.dylib here" spellcheck="false" />
-                <button class="browse-btn" data-target="native-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
-              </div>
+            <label><span data-i18n="tun.scanPorts">Ports</span>
+              <input id="scan-ports" value="top100" spellcheck="false" />
             </label>
-            <label><span data-i18n="ext.args">Arguments</span>
-              <input id="native-args" placeholder="args" spellcheck="false" />
-            </label>
-            <div class="row">
-              <button id="btn-native-load" data-i18n="common.load">Load</button>
-              <button id="btn-native-run" class="primary" data-i18n="common.run">Run</button>
-              <button id="btn-native-list" class="ghost" data-i18n="common.list">List</button>
-            </div>
+            <button id="btn-portscan" class="primary" data-i18n="tun.scanBtn">Scan</button>
+            <pre id="portscan-output" class="terminal"></pre>
+          </div>
+          <div class="card">
+            <h3 data-i18n="tun.screenshot">Screenshot</h3>
+            <button id="btn-screenshot" class="primary" data-i18n="tun.capture">Capture</button>
+            <img id="screenshot-img" class="screenshot hidden" data-i18n-alt="tun.screenshotAlt" alt="target screenshot" />
           </div>
         </div>
       </section>
+          </div>
+        </section>
 
       <section id="tab-listen" class="tab-page">
         <div class="ext-grid">
@@ -644,21 +585,71 @@
         <div id="profile-cards" class="profile-cards"></div>
       </section>
 
-      <section id="tab-chat" class="tab-page">
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="terminal-input">
-          <span class="prompt">#</span>
-          <input id="chat-input" data-i18n-placeholder="chat.placeholder" placeholder="message the team…" spellcheck="false" autocomplete="off" />
-          <button id="btn-chat-send" class="primary" data-i18n="chat.send">Send</button>
+      <section id="tab-extensions" class="tab-page">
+        <div class="ext-grid">
+          <div class="card">
+            <h3 data-i18n="ext.bofTitle">BOF (COFF)</h3>
+            <label><span data-i18n="ext.bofFile">Object file</span>
+              <div class="path-row">
+                <input id="bof-path" class="path-input" data-drop-label="BOF object" data-i18n-placeholder="ext.bofPlaceholder" placeholder="drag a .obj here" spellcheck="false" />
+                <button class="browse-btn" data-target="bof-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+              </div>
+            </label>
+            <label><span data-i18n="ext.args">Arguments</span>
+              <input id="bof-args" placeholder="arg1 arg2" spellcheck="false" />
+            </label>
+            <button id="btn-bof" class="primary" data-i18n="ext.bofRun">Execute BOF</button>
+          </div>
+          <div class="card">
+            <h3 data-i18n="ext.wasmTitle">WASM extension</h3>
+            <label><span data-i18n="ext.name">Name</span>
+              <input id="wasm-name" placeholder="my-extension" spellcheck="false" />
+            </label>
+            <label><span data-i18n="ext.wasmFile">Module file</span>
+              <div class="path-row">
+                <input id="wasm-path" class="path-input" data-drop-label="WASM module" data-i18n-placeholder="ext.wasmPlaceholder" placeholder="drag a .wasm here" spellcheck="false" />
+                <button class="browse-btn" data-target="wasm-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+              </div>
+            </label>
+            <label><span data-i18n="ext.args">Arguments</span>
+              <input id="wasm-args" placeholder="args" spellcheck="false" />
+            </label>
+            <div class="row">
+              <button id="btn-wasm-load" data-i18n="common.load">Load</button>
+              <button id="btn-wasm-run" class="primary" data-i18n="common.run">Run</button>
+              <button id="btn-wasm-list" class="ghost" data-i18n="common.list">List</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3 data-i18n="ext.registryTitle">Registry push</h3>
+            <label><span data-i18n="ext.extName">Extension name</span>
+              <input id="registry-name" placeholder="hello" spellcheck="false" />
+            </label>
+            <button id="btn-registry-push" class="primary" data-i18n="ext.fetchLoad">Fetch + load</button>
+            <button id="btn-registry-list" class="ghost" data-i18n="ext.listRegistry">List registry</button>
+            <pre id="registry-output" class="terminal"></pre>
+          </div>
+          <div class="card">
+            <h3 data-i18n="ext.nativeTitle">Native extensions</h3>
+            <label><span data-i18n="ext.name">Name</span>
+              <input id="native-name" placeholder="hello" spellcheck="false" />
+            </label>
+            <label><span data-i18n="ext.library">Library file (this machine, pushed to agent)</span>
+              <div class="path-row">
+                <input id="native-path" class="path-input" data-drop-label="native library" data-i18n-placeholder="ext.nativePlaceholder" placeholder="drag a .so/.dll/.dylib here" spellcheck="false" />
+                <button class="browse-btn" data-target="native-path" data-kind="file" data-i18n-title="common.chooseFile" title="Choose file">…</button>
+              </div>
+            </label>
+            <label><span data-i18n="ext.args">Arguments</span>
+              <input id="native-args" placeholder="args" spellcheck="false" />
+            </label>
+            <div class="row">
+              <button id="btn-native-load" data-i18n="common.load">Load</button>
+              <button id="btn-native-run" class="primary" data-i18n="common.run">Run</button>
+              <button id="btn-native-list" class="ghost" data-i18n="common.list">List</button>
+            </div>
+          </div>
         </div>
-      </section>
-
-      <section id="tab-events" class="tab-page">
-        <div class="file-toolbar">
-          <button id="btn-events-refresh" class="primary" data-i18n="common.refresh">Refresh</button>
-          <span class="muted" data-i18n="events.hint">Teamserver event feed: sessions, listeners, operators, canaries.</span>
-        </div>
-        <div id="event-list" class="event-list"></div>
       </section>
 
       <section id="tab-scripts" class="tab-page">
@@ -682,6 +673,14 @@
             <pre id="script-output" class="report-output script-output"></pre>
           </div>
         </div>
+      </section>
+
+      <section id="tab-graph" class="tab-page">
+        <div class="file-toolbar">
+          <button id="btn-graph-refresh" class="primary" data-i18n="graph.refresh">Refresh topology</button>
+          <span class="muted" data-i18n="graph.hint">Teamserver, sessions and pivot tunnels. Click a node to select the session.</span>
+        </div>
+        <div id="graph-canvas" class="graph-canvas"></div>
       </section>
 
       <section id="tab-team" class="tab-page">
@@ -758,63 +757,116 @@
         </div>
       </section>
 
-      <section id="tab-tunnels" class="tab-page">
-        <div class="ext-grid">
-          <div class="card">
-            <h3 data-i18n="tun.socks">SOCKS5 proxy</h3>
-            <label><span data-i18n="tun.listen">Listen address</span>
-              <input id="socks-listen" value="127.0.0.1:1080" spellcheck="false" />
-            </label>
-            <button id="btn-socks" class="primary" data-i18n="tun.startSocks">Start SOCKS5</button>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tun.localFwd">Local port forward</h3>
-            <label><span data-i18n="tun.listen">Listen address</span>
-              <input id="portfwd-listen" value="127.0.0.1:8000" spellcheck="false" />
-            </label>
-            <label><span data-i18n="tun.targetAgent">Target (agent side)</span>
-              <input id="portfwd-target" value="127.0.0.1:80" spellcheck="false" />
-            </label>
-            <button id="btn-portfwd" class="primary" data-i18n="tun.startFwd">Start forward</button>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tun.remoteFwd">Remote port forward</h3>
-            <label><span data-i18n="tun.bindAgent">Bind (agent side)</span>
-              <input id="rport-bind" value="127.0.0.1:9000" spellcheck="false" />
-            </label>
-            <label><span data-i18n="tun.targetServer">Target (server side)</span>
-              <input id="rport-to" value="127.0.0.1:80" spellcheck="false" />
-            </label>
-            <button id="btn-rport" class="primary" data-i18n="tun.startRport">Start rportfwd</button>
-            <div class="row">
-              <input id="rport-id" data-i18n-placeholder="tun.forwardId" placeholder="forward id to stop" spellcheck="false" />
-              <button id="btn-rport-stop" data-i18n="tun.stop">Stop</button>
-            </div>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tun.pivots">Pivots</h3>
-            <button id="btn-pivots" class="primary" data-i18n="tun.listPivots">List pivots</button>
-            <pre id="pivots-output" class="terminal"></pre>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tun.scan">Port scan (agent side)</h3>
-            <label><span data-i18n="tun.scanTarget">Target</span>
-              <input id="scan-target" value="127.0.0.1" spellcheck="false" />
-            </label>
-            <label><span data-i18n="tun.scanPorts">Ports</span>
-              <input id="scan-ports" value="top100" spellcheck="false" />
-            </label>
-            <button id="btn-portscan" class="primary" data-i18n="tun.scanBtn">Scan</button>
-            <pre id="portscan-output" class="terminal"></pre>
-          </div>
-          <div class="card">
-            <h3 data-i18n="tun.screenshot">Screenshot</h3>
-            <button id="btn-screenshot" class="primary" data-i18n="tun.capture">Capture</button>
-            <img id="screenshot-img" class="screenshot hidden" data-i18n-alt="tun.screenshotAlt" alt="target screenshot" />
-          </div>
+      <section id="tab-events" class="tab-page">
+        <div class="file-toolbar">
+          <button id="btn-events-refresh" class="primary" data-i18n="common.refresh">Refresh</button>
+          <span class="muted" data-i18n="events.hint">Teamserver event feed: sessions, listeners, operators, canaries.</span>
+        </div>
+        <div id="event-list" class="event-list"></div>
+      </section>
+
+      <section id="tab-chat" class="tab-page">
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="terminal-input">
+          <span class="prompt">#</span>
+          <input id="chat-input" data-i18n-placeholder="chat.placeholder" placeholder="message the team…" spellcheck="false" autocomplete="off" />
+          <button id="btn-chat-send" class="primary" data-i18n="chat.send">Send</button>
         </div>
       </section>
-    </main>
+
+      <section id="tab-copilot" class="tab-page">
+        <div class="copilot-layout">
+          <div class="copilot-main">
+            <header class="copilot-head">
+              <div class="copilot-identity">
+                <span class="copilot-orb"></span>
+                <div>
+                  <div class="copilot-title" data-i18n="ai.title">Shikra Copilot</div>
+                  <div id="copilot-subtitle" class="copilot-subtitle" data-i18n="ai.subtitle">agentic operator · approval gate</div>
+                </div>
+              </div>
+              <div class="copilot-meta">
+                <span id="copilot-model-pill" class="pill muted" data-i18n="ai.notConfigured">not configured</span>
+                <span id="copilot-key-pill" class="pill muted"></span>
+                <button id="btn-copilot-reset" class="ghost" data-i18n="ai.reset">New chat</button>
+              </div>
+            </header>
+
+            <div id="copilot-messages" class="copilot-messages"></div>
+
+            <div class="copilot-empty" id="copilot-empty">
+              <div class="copilot-empty-orb"><span></span></div>
+              <h2 data-i18n="ai.emptyTitle">Ask the copilot to work the engagement</h2>
+              <p data-i18n="ai.emptyBody">It plans step by step, calls tools through the approval gate, and reports what it actually ran.</p>
+              <div class="copilot-suggestions">
+                <button data-prompt="Triage the first session: identity, OS version, architecture and network interfaces." data-i18n="ai.suggest1">Triage first session</button>
+                <button data-prompt="List the running listeners, active pivots and the five most recent tasks." data-i18n="ai.suggest2">Fleet status</button>
+                <button data-prompt="Run a TCP connect scan on 127.0.0.1 for ports 22,80,443,8443 on the first session." data-i18n="ai.suggest3">Port scan</button>
+                <button data-prompt="Capture a screenshot of the first session and tell me where the file was saved." data-i18n="ai.suggest4">Screenshot</button>
+              </div>
+            </div>
+
+            <div class="copilot-composer">
+              <textarea id="copilot-input" rows="1" data-i18n-placeholder="ai.placeholder" placeholder="Ask the copilot…  (Enter to send, Shift+Enter for a new line)" spellcheck="false"></textarea>
+              <button id="btn-copilot-send" class="primary" data-i18n="ai.send">Send</button>
+            </div>
+            <div class="copilot-status" id="copilot-status"></div>
+          </div>
+
+          <aside class="copilot-rail">
+            <section class="panel">
+              <h3 data-i18n="ai.modelTitle">Model</h3>
+              <label><span data-i18n="ai.baseUrl">Provider URL</span>
+                <input id="copilot-base-url" placeholder="https://api.deepseek.com/v1" spellcheck="false" />
+              </label>
+              <label><span data-i18n="ai.model">Model</span>
+                <input id="copilot-model" placeholder="deepseek-flash" spellcheck="false" />
+              </label>
+              <label><span data-i18n="ai.apiKey">API key</span>
+                <input id="copilot-api-key" type="password" placeholder="sk-…" spellcheck="false" />
+              </label>
+              <div class="row tight">
+                <button id="btn-copilot-save" class="primary" data-i18n="ai.save">Save</button>
+                <span id="copilot-source-note" class="muted"></span>
+              </div>
+            </section>
+
+            <section class="panel">
+              <h3 data-i18n="ai.policyTitle">Approval gate</h3>
+              <label class="switch">
+                <input id="copilot-auto-approve" type="checkbox" />
+                <span class="switch-track"></span>
+                <span class="switch-label" data-i18n="ai.autoApprove">Auto-approve mutating tools (shell, upload)</span>
+              </label>
+              <label class="switch">
+                <input id="copilot-allow-destructive" type="checkbox" />
+                <span class="switch-track"></span>
+                <span class="switch-label" data-i18n="ai.allowDestructive">Auto-approve destructive tools (BOF, WASM, listeners)</span>
+              </label>
+              <div class="copilot-legend">
+                <span class="risk-dot read-only"></span><span data-i18n="ai.riskReadOnly">read-only — always allowed</span>
+                <span class="risk-dot mutating"></span><span data-i18n="ai.riskMutating">mutating — asks unless auto-approved</span>
+                <span class="risk-dot destructive"></span><span data-i18n="ai.riskDestructive">destructive — asks unless both enabled</span>
+              </div>
+            </section>
+
+            <section class="panel grow">
+              <h3 data-i18n="ai.toolsTitle">Tool surface</h3>
+              <div id="copilot-tools" class="copilot-tools"></div>
+            </section>
+          </aside>
+        </div>
+      </section>
+      </div>
+    </div>
+    <footer class="statusbar">
+      <span class="status-item" id="status-conn"><span class="dot online"></span><span data-i18n="status.connected">connected</span></span>
+      <span class="status-item" id="status-sessions"></span>
+      <span class="status-item" id="status-listeners"></span>
+      <span class="status-sep"></span>
+      <span class="status-item muted" id="status-server"></span>
+      <span class="status-item muted" id="status-clock"></span>
+    </footer>
   </div>
   <div id="session-menu" class="session-menu hidden"></div>
   <div id="toast" class="toast hidden"></div>
