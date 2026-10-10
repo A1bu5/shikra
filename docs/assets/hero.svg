@@ -1,0 +1,92 @@
+<svg width="1600" height="420" viewBox="0 0 1600 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Shikra — Rust-native command and control framework">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#04070d"/>
+      <stop offset="0.55" stop-color="#0a1424"/>
+      <stop offset="1" stop-color="#0e1e33"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="1" stop-color="#0284c7"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.83" cy="0.38" r="0.6">
+      <stop offset="0" stop-color="#0ea5e9" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#0ea5e9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="-0.7">
+      <stop offset="0" stop-color="#38bdf8" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#94a3b8" stroke-opacity="0.055"/>
+    </pattern>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="420" rx="18" fill="url(#bg)"/>
+  <rect width="1600" height="420" rx="18" fill="url(#grid)"/>
+  <rect width="1600" height="420" rx="18" fill="url(#glow)"/>
+
+  <!-- radar -->
+  <g transform="translate(1305 212)">
+    <circle r="172" fill="none" stroke="#38bdf8" stroke-opacity="0.07"/>
+    <circle r="130" fill="none" stroke="#38bdf8" stroke-opacity="0.10"/>
+    <circle r="88"  fill="none" stroke="#38bdf8" stroke-opacity="0.14"/>
+    <circle r="46"  fill="none" stroke="#38bdf8" stroke-opacity="0.18"/>
+    <line x1="-180" y1="0" x2="180" y2="0" stroke="#38bdf8" stroke-opacity="0.08"/>
+    <line x1="0" y1="-180" x2="0" y2="180" stroke="#38bdf8" stroke-opacity="0.08"/>
+    <path d="M0 0 L172 -104 A172 172 0 0 1 168 38 Z" fill="url(#beam)" opacity="0.45"/>
+    <line x1="0" y1="0" x2="172" y2="-104" stroke="#7dd3fc" stroke-opacity="0.55" stroke-width="1.5"/>
+    <circle cx="84" cy="-58" r="10" fill="#7dd3fc" opacity="0.25" filter="url(#soft)"/>
+    <circle cx="84" cy="-58" r="4.5" fill="#7dd3fc"/>
+    <circle cx="-46" cy="72" r="9" fill="#38bdf8" opacity="0.22" filter="url(#soft)"/>
+    <circle cx="-46" cy="72" r="4" fill="#38bdf8"/>
+    <circle cx="124" cy="46" r="8" fill="#38bdf8" opacity="0.20" filter="url(#soft)"/>
+    <circle cx="124" cy="46" r="3.5" fill="#38bdf8"/>
+    <circle cx="-96" cy="-34" r="7" fill="#7dd3fc" opacity="0.18" filter="url(#soft)"/>
+    <circle cx="-96" cy="-34" r="3" fill="#7dd3fc"/>
+    <text x="-238" y="6" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" letter-spacing="3" fill="#41607e">HTTPS</text>
+    <text x="176" y="6" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" letter-spacing="3" fill="#41607e">QUIC</text>
+    <text x="-22" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" letter-spacing="3" fill="#41607e">DNS</text>
+    <text x="-24" y="-196" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" letter-spacing="3" fill="#41607e">WIREGUARD</text>
+  </g>
+
+  <!-- mark -->
+  <g transform="translate(168 150)">
+    <path d="M0 -46 L46 0 L0 46 L-46 0 Z" fill="#0ea5e9" opacity="0.14"/>
+    <path d="M0 -46 L46 0 L0 46 L-46 0 Z" fill="none" stroke="url(#accent)" stroke-width="4"/>
+    <path d="M0 -22 L22 0 L0 22 L-22 0 Z" fill="url(#accent)"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="252" y="186" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="98" font-weight="700" letter-spacing="18" fill="#f8fafc">SHIKRA</text>
+
+  <!-- taglines -->
+  <text x="256" y="228" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="26" fill="#cbd5e1">Rust-native command &amp; control framework</text>
+  <text x="256" y="262" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19" fill="#6b8299">operator console · AI copilot · end-to-end encrypted</text>
+
+  <!-- chips -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#8fa6bd">
+    <g>
+      <rect x="256" y="292" width="172" height="34" rx="17" fill="#0d1a2b" stroke="#1e3a56"/>
+      <text x="279" y="314">GPL-3.0-only</text>
+    </g>
+    <g>
+      <rect x="444" y="292" width="304" height="34" rx="17" fill="#0d1a2b" stroke="#1e3a56"/>
+      <text x="467" y="314">linux · macos · windows</text>
+    </g>
+    <g>
+      <rect x="764" y="292" width="311" height="34" rx="17" fill="#0d1a2b" stroke="#1e3a56"/>
+      <text x="787" y="314">no implants in releases</text>
+    </g>
+  </g>
+
+  <!-- terminal hint -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">
+    <text x="256" y="378" fill="#38bdf8">$</text>
+    <text x="276" y="378" fill="#7c93aa">shikra-server --bootstrap --state-dir ./state</text>
+    <rect x="746" y="364" width="11" height="17" fill="#38bdf8" opacity="0.85"/>
+  </g>
+</svg>
