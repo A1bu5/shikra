@@ -449,5 +449,6 @@
   "confirm.stopServer": "チームサーバーを停止しますか?",
   "confirm.stopDatabase": "内蔵 PostgreSQL を停止しますか?",
   "confirm.reflectDll": "{file} をエージェントにロードしますか?",
-  "files.listFailed": "ディレクトリ一覧の取得に失敗"
+  "files.listFailed": "ディレクトリ一覧の取得に失敗",
+  "session.closeTab": "タブを閉じる"
 }

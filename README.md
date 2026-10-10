@@ -57,7 +57,10 @@ The console is a three-zone workbench: a grouped navigation rail
 with live health and a details panel, and a persistent status bar
 (connection, session and listener counts, endpoint, clock). Double-click a
 session — or press **Interact** — to open its workspace with terminal, file,
-process, task and tunnel panes.
+process, task and tunnel panes. Several sessions can stay open side by side
+as closable tabs: each tab keeps its own active pane, directory and terminal
+scrollback, its health dot live-updates, and dead tabs stay visible until
+closed.
 
 <p align="center">
   <img src="docs/assets/console-sessions.png" alt="Sessions workbench — table, health and details panel" width="100%">

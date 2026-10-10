@@ -449,5 +449,6 @@
   "confirm.stopServer": "停止团队服务器?所有 Agent 将失去控制通道。",
   "confirm.stopDatabase": "停止内嵌 PostgreSQL?团队服务器将失去数据库。",
   "confirm.reflectDll": "将 {file} 反射加载进 Agent 进程?有缺陷的 DLL 可能导致会话崩溃。",
-  "files.listFailed": "列目录失败"
+  "files.listFailed": "列目录失败",
+  "session.closeTab": "关闭标签"
 }

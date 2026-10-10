@@ -449,5 +449,6 @@
   "confirm.stopServer": "Stop the teamserver? All agents will lose their control channel.",
   "confirm.stopDatabase": "Stop the embedded PostgreSQL? The teamserver will lose its database.",
   "confirm.reflectDll": "Reflectively load {file} into the agent process? A faulty DLL can crash the session.",
-  "files.listFailed": "failed to list the directory"
+  "files.listFailed": "failed to list the directory",
+  "session.closeTab": "Close tab"
 }

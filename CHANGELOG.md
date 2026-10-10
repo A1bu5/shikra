@@ -9,11 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Multi-session tabs** — open several sessions side by side as closable
+  tabs (double-click a row or press *Interact*). Each tab keeps its own
+  active pane, directory and terminal scrollback, health dots live-update,
+  and dead tabs stay visible until closed; the sessions table marks rows
+  that have an open tab.
 - **Console workbench redesign** — grouped navigation rail (operations,
   build, team, assistant), a table-first sessions workspace with health,
   filtering and a live details panel, a dedicated session workspace
   (terminal / files / processes / tasks / tunnels), a persistent status bar
   and honest empty states throughout.
+- **In-place session rows** — the sessions table updates volatile fields
+  (last seen, selection, open-tab marker) without rebuilding the DOM, so
+  hover states and double-clicks are never interrupted by the refresh timer.
 - **Guardrails** — destructive actions (stopping listeners, cancelling
   tasks, marking sessions dead, stopping the teamserver or the embedded
   database, reflective DLL loads, deleting scripts) now require an explicit

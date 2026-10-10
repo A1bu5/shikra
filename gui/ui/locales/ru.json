@@ -449,5 +449,6 @@
   "confirm.stopServer": "Остановить тимсервер?",
   "confirm.stopDatabase": "Остановить встроенный PostgreSQL?",
   "confirm.reflectDll": "Загрузить {file} в процесс агента?",
-  "files.listFailed": "не удалось получить список каталога"
+  "files.listFailed": "не удалось получить список каталога",
+  "session.closeTab": "Закрыть вкладку"
 }

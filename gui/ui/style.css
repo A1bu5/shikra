@@ -1316,3 +1316,61 @@ button.danger:hover { border-color: var(--danger); background: #2a0f0f; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #1b2735; border-radius: 6px; border: 2px solid var(--bg); }
 ::-webkit-scrollbar-thumb:hover { background: #24384c; }
+
+/* --- multi-session tabs (Havoc-style) ----------------------------------- */
+
+.session-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 14px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+.session-tabs::-webkit-scrollbar { display: none; }
+.session-tabs.hidden { display: none; }
+
+.session-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 7px 12px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.session-tab:hover { color: var(--text); background: #14202e; }
+.session-tab.active {
+  color: #dff7ff;
+  background: #10283a;
+  border-color: #155e75;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.session-tab.dead { opacity: 0.75; }
+.session-tab.dead .session-tab-host { text-decoration: line-through; }
+.session-tab-host { font-weight: 600; }
+.session-tab .health-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.session-tab .health-dot.healthy { background: var(--ok); }
+.session-tab .health-dot.unresponsive { background: var(--warn); }
+.session-tab .health-dot.offhours { background: #818cf8; }
+.session-tab .health-dot.killdate,
+.session-tab .health-dot.dead { background: var(--danger); }
+.session-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.session-tab-close:hover { background: #7f1d1d; color: #fecaca; }
+
+.data-table tbody tr.open-tab td:first-child { box-shadow: inset 2px 0 0 #155e75; }
+.data-table tbody tr.selected.open-tab td:first-child { box-shadow: inset 3px 0 0 var(--accent); }

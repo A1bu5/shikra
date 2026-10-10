@@ -449,5 +449,6 @@
   "confirm.stopServer": "팀서버를 중지할까요?",
   "confirm.stopDatabase": "내장 PostgreSQL을 중지할까요?",
   "confirm.reflectDll": "{file}을(를) 에이전트에 로드할까요?",
-  "files.listFailed": "디렉터리 목록 실패"
+  "files.listFailed": "디렉터리 목록 실패",
+  "session.closeTab": "탭 닫기"
 }
