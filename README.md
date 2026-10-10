@@ -263,6 +263,44 @@ A curated slice of what a session accepts (see
 | Team | `operators`, `operator-add`, `operator-del`, `creds`, `loot`, team canaries |
 | AI | `ai` — tool-calling operator behind an approval gate |
 
+## 🤖 AI copilot
+
+Shikra ships an agentic operator that plans with an OpenAI-compatible model
+(DeepSeek, OpenAI, OpenRouter, vLLM, Ollama…) and executes the same tool
+surface from the console and the CLI. Every call passes through a three-tier
+approval gate:
+
+| Tier | Tools | Behaviour |
+| --- | --- | --- |
+| **read-only** | `list_sessions`, `session_info`, `list_tasks`, `list_listeners`, `list_pivots`, `list_extensions`, `list_credentials`, `list_loot`, `fs_ls`, `fs_cat`, `ps`, `netstat`, `ifconfig`, `env_dump`, `wasm_list` | always allowed |
+| **mutating** | `run_shell`, `fs_upload`, `fs_download`, `portscan`, `screenshot` | needs `--auto-approve`, or one click in the console |
+| **destructive** | `bof_run`, `wasm_load`, `wasm_run`, `listener_start`, `listener_stop` | needs `--auto-approve --allow-destructive` or explicit approval — unknown tools default here |
+
+<p align="center">
+  <img src="docs/assets/console-copilot.png" alt="Shikra Copilot — plan, tool cards and the approval gate" width="100%">
+</p>
+
+The console panel streams every step: the plan, tool cards with risk badges,
+arguments and results, and an approve/deny card whenever the gate requires a
+human decision. Denied calls are fed back to the model, which adapts or
+reports honestly instead of retrying blindly; tasks it launches are tagged
+`ai_initiated` and surface as `[ai]` in `shikra-client tasks`.
+
+```sh
+# One-shot: read-only recon runs automatically, shell waits for the flag.
+shikra-client ai "Triage the first session: identity, OS and interfaces."
+
+# Full agentic REPL.
+export SHIKRA_LLM_BASE_URL=https://api.deepseek.com/v1
+export SHIKRA_LLM_API_KEY=sk-…        # or set it in the console panel
+export SHIKRA_LLM_MODEL=deepseek-flash
+shikra-client ai --auto-approve
+```
+
+The same settings live in the console's **✦ Copilot** tab (persisted in the
+console config with `0600`); `SHIKRA_LLM_*` environment variables take
+precedence.
+
 ## 🛡️ Hardening & OPSEC
 
 - Compile-time string obfuscation (`shikra-obf`) with random per-build seeds.
@@ -324,7 +362,7 @@ cd gui && cargo tauri build    # bundle
 | `SHIKRA_DNS_ADDR`, `SHIKRA_WG_ADDR`, `SHIKRA_DNS_ZONE` | UDP transports |
 | `SHIKRA_LOG_FORMAT` | `text` or `json` |
 | `SHIKRA_DNS_RESOLVER`, `SHIKRA_PUBLIC_IP` | Registration helpers |
-| `SHIKRA_LLM_BASE_URL`, `SHIKRA_LLM_MODEL` | AI copilot backend |
+| `SHIKRA_LLM_BASE_URL`, `SHIKRA_LLM_MODEL`, `SHIKRA_LLM_API_KEY`, `SHIKRA_LLM_TEMPERATURE` | AI copilot backend (override the console panel) |
 
 ## 📦 Releases & supply chain
 
