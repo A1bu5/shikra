@@ -145,6 +145,7 @@
           <button id="btn-disconnect" class="ghost" data-i18n="top.disconnect">Disconnect</button>
         </div>
         <nav class="tabs">
+          <button data-tab="copilot" class="tab">✦ Copilot</button>
           <button data-tab="terminal" class="tab active" data-i18n="tab.terminal">Terminal</button>
           <button data-tab="files" class="tab" data-i18n="tab.files">Files</button>
           <button data-tab="processes" class="tab" data-i18n="tab.processes">Processes</button>
@@ -161,6 +162,90 @@
           <button data-tab="team" class="tab" data-i18n="tab.team">Team</button>
         </nav>
       </header>
+
+      <section id="tab-copilot" class="tab-page">
+        <div class="copilot-layout">
+          <div class="copilot-main">
+            <header class="copilot-head">
+              <div class="copilot-identity">
+                <span class="copilot-orb"></span>
+                <div>
+                  <div class="copilot-title" data-i18n="ai.title">Shikra Copilot</div>
+                  <div id="copilot-subtitle" class="copilot-subtitle" data-i18n="ai.subtitle">agentic operator · approval gate</div>
+                </div>
+              </div>
+              <div class="copilot-meta">
+                <span id="copilot-model-pill" class="pill muted" data-i18n="ai.notConfigured">not configured</span>
+                <span id="copilot-key-pill" class="pill muted"></span>
+                <button id="btn-copilot-reset" class="ghost" data-i18n="ai.reset">New chat</button>
+              </div>
+            </header>
+
+            <div id="copilot-messages" class="copilot-messages"></div>
+
+            <div class="copilot-empty" id="copilot-empty">
+              <div class="copilot-empty-orb"><span></span></div>
+              <h2 data-i18n="ai.emptyTitle">Ask the copilot to work the engagement</h2>
+              <p data-i18n="ai.emptyBody">It plans step by step, calls tools through the approval gate, and reports what it actually ran.</p>
+              <div class="copilot-suggestions">
+                <button data-prompt="Triage the first session: identity, OS version, architecture and network interfaces." data-i18n="ai.suggest1">Triage first session</button>
+                <button data-prompt="List the running listeners, active pivots and the five most recent tasks." data-i18n="ai.suggest2">Fleet status</button>
+                <button data-prompt="Run a TCP connect scan on 127.0.0.1 for ports 22,80,443,8443 on the first session." data-i18n="ai.suggest3">Port scan</button>
+                <button data-prompt="Capture a screenshot of the first session and tell me where the file was saved." data-i18n="ai.suggest4">Screenshot</button>
+              </div>
+            </div>
+
+            <div class="copilot-composer">
+              <textarea id="copilot-input" rows="1" data-i18n-placeholder="ai.placeholder" placeholder="Ask the copilot…  (Enter to send, Shift+Enter for a new line)" spellcheck="false"></textarea>
+              <button id="btn-copilot-send" class="primary" data-i18n="ai.send">Send</button>
+            </div>
+            <div class="copilot-status" id="copilot-status"></div>
+          </div>
+
+          <aside class="copilot-rail">
+            <section class="panel">
+              <h3 data-i18n="ai.modelTitle">Model</h3>
+              <label><span data-i18n="ai.baseUrl">Provider URL</span>
+                <input id="copilot-base-url" placeholder="https://api.deepseek.com/v1" spellcheck="false" />
+              </label>
+              <label><span data-i18n="ai.model">Model</span>
+                <input id="copilot-model" placeholder="deepseek-flash" spellcheck="false" />
+              </label>
+              <label><span data-i18n="ai.apiKey">API key</span>
+                <input id="copilot-api-key" type="password" placeholder="sk-…" spellcheck="false" />
+              </label>
+              <div class="row tight">
+                <button id="btn-copilot-save" class="primary" data-i18n="ai.save">Save</button>
+                <span id="copilot-source-note" class="muted"></span>
+              </div>
+            </section>
+
+            <section class="panel">
+              <h3 data-i18n="ai.policyTitle">Approval gate</h3>
+              <label class="switch">
+                <input id="copilot-auto-approve" type="checkbox" />
+                <span class="switch-track"></span>
+                <span class="switch-label" data-i18n="ai.autoApprove">Auto-approve mutating tools (shell, upload)</span>
+              </label>
+              <label class="switch">
+                <input id="copilot-allow-destructive" type="checkbox" />
+                <span class="switch-track"></span>
+                <span class="switch-label" data-i18n="ai.allowDestructive">Auto-approve destructive tools (BOF, WASM, listeners)</span>
+              </label>
+              <div class="copilot-legend">
+                <span class="risk-dot read-only"></span><span data-i18n="ai.riskReadOnly">read-only — always allowed</span>
+                <span class="risk-dot mutating"></span><span data-i18n="ai.riskMutating">mutating — asks unless auto-approved</span>
+                <span class="risk-dot destructive"></span><span data-i18n="ai.riskDestructive">destructive — asks unless both enabled</span>
+              </div>
+            </section>
+
+            <section class="panel grow">
+              <h3 data-i18n="ai.toolsTitle">Tool surface</h3>
+              <div id="copilot-tools" class="copilot-tools"></div>
+            </section>
+          </aside>
+        </div>
+      </section>
 
       <section id="tab-terminal" class="tab-page active">
         <div id="terminal-output" class="terminal-output"></div>

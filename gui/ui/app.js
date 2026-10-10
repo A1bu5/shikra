@@ -94,6 +94,7 @@ function detectLanguage() {
 function refreshDynamicText() {
   renderSessions(state.sessions ?? []);
   renderActiveSession();
+  refreshCopilotPills();
   if (!$("tab-listen").classList.contains("active")) return;
   loadListeners();
 }
@@ -1341,6 +1342,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
     if (tab.dataset.tab === "events") loadEvents();
     if (tab.dataset.tab === "scripts") loadScripts();
     if (tab.dataset.tab === "profiles") loadProfiles();
+    if (tab.dataset.tab === "copilot") loadCopilot();
   });
 });
 
@@ -2588,3 +2590,440 @@ loadConsoleConfig().then(() => {
   appendTerminal(t("terminal.hint"), "meta");
   refreshServerStatus().catch(() => {});
 });
+
+// ---------- AI copilot ----------
+
+const COPILOT_TOOLS = [
+  ["list_sessions", "read_only"], ["session_info", "read_only"], ["list_tasks", "read_only"],
+  ["list_listeners", "read_only"], ["list_pivots", "read_only"], ["list_extensions", "read_only"],
+  ["list_credentials", "read_only"], ["list_loot", "read_only"], ["fs_ls", "read_only"],
+  ["fs_cat", "read_only"], ["ps", "read_only"], ["netstat", "read_only"],
+  ["ifconfig", "read_only"], ["env_dump", "read_only"], ["wasm_list", "read_only"],
+  ["run_shell", "mutating"], ["fs_upload", "mutating"], ["fs_download", "mutating"],
+  ["portscan", "mutating"], ["screenshot", "mutating"],
+  ["listener_start", "destructive"], ["listener_stop", "destructive"], ["bof_run", "destructive"],
+  ["wasm_load", "destructive"], ["wasm_run", "destructive"],
+];
+
+const RISK_LABELS = { read_only: "read-only", mutating: "mutating", destructive: "destructive" };
+const copilotCards = new Map();
+let copilotStatus = null;
+let copilotWired = false;
+let copilotBusy = false;
+let copilotThinking = null;
+
+function copilotEscape(text) {
+  return String(text ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[ch]);
+}
+
+function copilotInline(text) {
+  return text
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+
+function copilotSplitRow(line) {
+  return line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+}
+
+function renderMarkdown(text) {
+  const lines = copilotEscape(text).split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim().startsWith("```")) {
+      const buffer = [];
+      i += 1;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) { buffer.push(lines[i]); i += 1; }
+      i += 1;
+      out.push(`<pre class="md-code"><code>${buffer.join("\n")}</code></pre>`);
+      continue;
+    }
+    if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
+      const header = copilotSplitRow(line);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(copilotSplitRow(lines[i])); i += 1; }
+      out.push(`<table class="md-table"><thead><tr>${header.map((h) => `<th>${copilotInline(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${copilotInline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+      continue;
+    }
+    const heading = /^(#{1,4})\s+(.*)$/.exec(line);
+    if (heading) {
+      const level = Math.min(6, heading[1].length + 2);
+      out.push(`<h${level}>${copilotInline(heading[2])}</h${level}>`);
+      i += 1;
+      continue;
+    }
+    if (/^\s*[-*]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) { items.push(copilotInline(lines[i].replace(/^\s*[-*]\s+/, ""))); i += 1; }
+      out.push(`<ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`);
+      continue;
+    }
+    if (/^\s*\d+[.)]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) { items.push(copilotInline(lines[i].replace(/^\s*\d+[.)]\s+/, ""))); i += 1; }
+      out.push(`<ol>${items.map((item) => `<li>${item}</li>`).join("")}</ol>`);
+      continue;
+    }
+    if (/^\s*>\s?/.test(line)) {
+      out.push(`<blockquote>${copilotInline(line.replace(/^\s*>\s?/, ""))}</blockquote>`);
+      i += 1;
+      continue;
+    }
+    if (line.trim() === "") { i += 1; continue; }
+    const paragraph = [];
+    while (
+      i < lines.length && lines[i].trim() !== "" &&
+      !/^\s*([-*]|\d+[.)])\s+/.test(lines[i]) &&
+      !lines[i].trim().startsWith("```") && !/^#{1,4}\s/.test(lines[i]) && !/^\s*\|/.test(lines[i])
+    ) { paragraph.push(lines[i]); i += 1; }
+    out.push(`<p>${paragraph.map(copilotInline).join("<br/>")}</p>`);
+  }
+  return out.join("");
+}
+
+function copilotScroll() {
+  const box = $("copilot-messages");
+  box.scrollTop = box.scrollHeight;
+}
+
+function copilotHideEmpty() {
+  $("copilot-empty").classList.add("hidden");
+}
+
+function appendCopilotNode(node) {
+  copilotHideEmpty();
+  $("copilot-messages").appendChild(node);
+  copilotScroll();
+}
+
+function appendCopilotMessage(kind, content) {
+  const wrapper = document.createElement("div");
+  wrapper.className = `msg ${kind}`;
+  const head = document.createElement("div");
+  head.className = "msg-head";
+  head.textContent = kind === "user" ? t("ai.you") : kind === "assistant" ? t("ai.copilot") : "";
+  const body = document.createElement("div");
+  body.className = "msg-body";
+  if (kind === "assistant") body.innerHTML = renderMarkdown(content);
+  else body.textContent = content;
+  if (head.textContent) wrapper.appendChild(head);
+  wrapper.appendChild(body);
+  appendCopilotNode(wrapper);
+}
+
+function appendCopilotError(message) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "msg error";
+  const body = document.createElement("div");
+  body.className = "msg-body";
+  body.textContent = message;
+  wrapper.appendChild(body);
+  appendCopilotNode(wrapper);
+}
+
+function copilotArgSummary(args) {
+  const text = JSON.stringify(args ?? {});
+  return text.length > 84 ? `${text.slice(0, 84)}…` : text;
+}
+
+function copilotPretty(value) {
+  let text;
+  try { text = JSON.stringify(value ?? null, null, 2); } catch { text = String(value); }
+  return text.length > 6000 ? `${text.slice(0, 6000)}\n… (truncated)` : text;
+}
+
+function copilotToolCard(data, state) {
+  const card = document.createElement("div");
+  card.className = `tool-card ${state}`;
+  card.dataset.callId = data.call_id;
+  const risk = data.risk ?? "destructive";
+  card.innerHTML = `
+    <div class="tool-head">
+      <span class="risk-badge ${risk}">${RISK_LABELS[risk] ?? risk}</span>
+      <span class="tool-name">${copilotEscape(data.name)}</span>
+      <span class="tool-args">${copilotEscape(copilotArgSummary(data.arguments))}</span>
+      <span class="tool-status ${state}">${state}</span>
+      <span class="tool-chevron">›</span>
+    </div>
+    <div class="tool-body">
+      <div class="tool-label">${t("ai.arguments")}</div>
+      <pre>${copilotEscape(copilotPretty(data.arguments))}</pre>
+      <div class="tool-result"></div>
+    </div>`;
+  card.querySelector(".tool-head").addEventListener("click", () => card.classList.toggle("open"));
+  return card;
+}
+
+function copilotMountCard(callId, card, open = false) {
+  const previous = copilotCards.get(callId);
+  if (previous && previous.parentNode) previous.parentNode.replaceChild(card, previous);
+  else appendCopilotNode(card);
+  copilotCards.set(callId, card);
+  if (open) card.classList.add("open");
+}
+
+function copilotStartTool(data) {
+  const card = copilotToolCard({ ...data }, "running");
+  copilotMountCard(data.call_id, card, true);
+}
+
+function copilotFinishTool(data) {
+  const state = !data.approved ? "denied" : data.error ? "error" : "ok";
+  const card = copilotToolCard({ ...data }, state);
+  // Successful calls collapse to a single row; failures stay open.
+  copilotMountCard(data.call_id, card, state !== "ok");
+  const result = card.querySelector(".tool-result");
+  if (data.error) {
+    result.innerHTML = `<div class="tool-label">${t(state === "denied" ? "ai.denied" : "ai.error")}</div><pre>${copilotEscape(data.error)}</pre>`;
+  } else if (data.result !== undefined && data.result !== null) {
+    result.innerHTML = `<div class="tool-label">${t("ai.result")}</div><pre>${copilotEscape(copilotPretty(data.result))}</pre>`;
+  }
+}
+
+function copilotApprovalRequest(data) {
+  const risk = data.risk ?? "destructive";
+  const card = document.createElement("div");
+  card.className = "tool-card pending";
+  card.dataset.callId = data.call_id;
+  card.innerHTML = `
+    <div class="approval-card">
+      <div class="approval-title">✦ ${t("ai.approvalTitle")}</div>
+      <div class="approval-desc">
+        <span class="risk-badge ${risk}">${RISK_LABELS[risk] ?? risk}</span>
+        <span class="tool-name">${copilotEscape(data.name)}</span>
+        <span class="tool-args">${copilotEscape(copilotArgSummary(data.arguments))}</span>
+      </div>
+      <div class="tool-label">${t("ai.arguments")}</div>
+      <pre>${copilotEscape(copilotPretty(data.arguments))}</pre>
+      <div class="approval-actions">
+        <button class="approve">${t("ai.approve")}</button>
+        <button class="deny">${t("ai.deny")}</button>
+      </div>
+    </div>`;
+  const approve = card.querySelector("button.approve");
+  const deny = card.querySelector("button.deny");
+  const answer = (approved) => {
+    approve.disabled = true;
+    deny.disabled = true;
+    invoke("ai_approve", { callId: data.call_id, approved }).catch((err) => toast(String(err), true));
+  };
+  approve.addEventListener("click", () => answer(true));
+  deny.addEventListener("click", () => answer(false));
+  copilotMountCard(data.call_id, card, true);
+  copilotScroll();
+}
+
+function copilotApprovalResolved(data) {
+  const card = copilotCards.get(data.call_id);
+  if (!card) return;
+  const actions = card.querySelector(".approval-actions");
+  if (!actions) return;
+  const note = document.createElement("div");
+  note.className = "approval-resolved";
+  note.textContent = data.approved ? t("ai.approved") : t("ai.deniedNote");
+  actions.replaceWith(note);
+}
+
+function copilotShowThinking() {
+  if (copilotThinking) return;
+  const wrapper = document.createElement("div");
+  wrapper.className = "msg assistant";
+  const body = document.createElement("div");
+  body.className = "msg-body";
+  body.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
+  wrapper.appendChild(body);
+  copilotThinking = wrapper;
+  appendCopilotNode(wrapper);
+}
+
+function copilotClearThinking() {
+  if (copilotThinking?.parentNode) copilotThinking.parentNode.removeChild(copilotThinking);
+  copilotThinking = null;
+}
+
+function copilotSetBusy(busy) {
+  copilotBusy = busy;
+  $("btn-copilot-send").disabled = busy;
+  $("copilot-status").textContent = busy ? t("ai.working") : "";
+}
+
+function handleCopilotEvent(event) {
+  const data = event.payload ?? {};
+  switch (data.type) {
+    case "user_message":
+      appendCopilotMessage("user", data.content ?? "");
+      copilotShowThinking();
+      break;
+    case "assistant_message":
+      copilotClearThinking();
+      appendCopilotMessage("assistant", data.content ?? "");
+      break;
+    case "tool_start":
+      copilotClearThinking();
+      copilotStartTool(data);
+      copilotShowThinking();
+      break;
+    case "tool_call":
+      copilotClearThinking();
+      copilotFinishTool(data);
+      copilotShowThinking();
+      break;
+    case "approval_request":
+      copilotClearThinking();
+      copilotApprovalRequest(data);
+      break;
+    case "approval_resolved":
+      copilotApprovalResolved(data);
+      copilotShowThinking();
+      break;
+    case "error":
+      copilotClearThinking();
+      appendCopilotError(data.message ?? "copilot error");
+      break;
+    case "turn_done":
+      copilotClearThinking();
+      copilotSetBusy(false);
+      break;
+    default:
+      break;
+  }
+}
+
+async function sendCopilotPrompt(text) {
+  if (copilotBusy) return;
+  const input = $("copilot-input");
+  const prompt = (text ?? input.value).trim();
+  if (!prompt) return;
+  input.value = "";
+  copilotAutoGrow(input);
+  copilotSetBusy(true);
+  copilotShowThinking();
+  try {
+    await invoke("ai_send", { prompt });
+  } catch (err) {
+    copilotClearThinking();
+    copilotSetBusy(false);
+    appendCopilotError(String(err));
+  }
+}
+
+function copilotAutoGrow(element) {
+  element.style.height = "auto";
+  element.style.height = `${Math.min(180, element.scrollHeight)}px`;
+}
+
+function renderCopilotTools() {
+  const container = $("copilot-tools");
+  container.innerHTML = "";
+  for (const [group, label] of [["read_only", "ai.riskReadOnly"], ["mutating", "ai.riskMutating"], ["destructive", "ai.riskDestructive"]]) {
+    const heading = document.createElement("div");
+    heading.className = "copilot-tools-group";
+    heading.textContent = t(label).split("—")[0].trim();
+    container.appendChild(heading);
+    for (const [name, risk] of COPILOT_TOOLS.filter(([, value]) => value === group)) {
+      const chip = document.createElement("span");
+      chip.className = `tool-chip ${risk}`;
+      chip.textContent = name;
+      container.appendChild(chip);
+    }
+  }
+}
+
+function updateCopilotPills() {
+  if (!copilotStatus) return;
+  const modelPill = $("copilot-model-pill");
+  const keyPill = $("copilot-key-pill");
+  if (copilotStatus.configured) {
+    modelPill.textContent = copilotStatus.model;
+    modelPill.className = "pill ok";
+  } else {
+    modelPill.textContent = t("ai.notConfigured");
+    modelPill.className = "pill warn";
+  }
+  keyPill.textContent = copilotStatus.has_key ? t("ai.keySet") : t("ai.keyMissing");
+  keyPill.className = copilotStatus.has_key ? "pill ok" : "pill muted";
+  $("copilot-source-note").textContent = copilotStatus.source === "environment" ? t("ai.sourceEnv") : t("ai.sourceConfig");
+}
+
+async function refreshCopilotStatus() {
+  try {
+    copilotStatus = await invoke("ai_status");
+  } catch {
+    copilotStatus = null;
+  }
+  if (!copilotStatus) return;
+  $("copilot-base-url").value = copilotStatus.base_url ?? "";
+  $("copilot-model").value = copilotStatus.model ?? "";
+  $("copilot-auto-approve").checked = !!copilotStatus.auto_approve;
+  $("copilot-allow-destructive").checked = !!copilotStatus.allow_destructive;
+  updateCopilotPills();
+}
+
+function refreshCopilotPills() {
+  updateCopilotPills();
+}
+
+async function saveCopilotSettings(announce = true) {
+  const settings = {
+    base_url: $("copilot-base-url").value.trim(),
+    model: $("copilot-model").value.trim(),
+    api_key: $("copilot-api-key").value.trim(),
+    auto_approve: $("copilot-auto-approve").checked,
+    allow_destructive: $("copilot-allow-destructive").checked,
+  };
+  try {
+    await invoke("ai_config_save", { settings });
+    await refreshCopilotStatus();
+    if (announce) toast(t("ai.saved"));
+  } catch (err) {
+    toast(String(err), true);
+  }
+}
+
+function wireCopilot() {
+  const input = $("copilot-input");
+  input.addEventListener("input", () => copilotAutoGrow(input));
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendCopilotPrompt();
+    }
+  });
+  $("btn-copilot-send").addEventListener("click", () => sendCopilotPrompt());
+  $("btn-copilot-save").addEventListener("click", () => saveCopilotSettings());
+  $("btn-copilot-reset").addEventListener("click", async () => {
+    try {
+      await invoke("ai_reset");
+      $("copilot-messages").innerHTML = "";
+      $("copilot-empty").classList.remove("hidden");
+      copilotCards.clear();
+      toast(t("ai.resetDone"));
+    } catch (err) {
+      toast(String(err), true);
+    }
+  });
+  document.querySelectorAll(".copilot-suggestions button").forEach((button) => {
+    button.addEventListener("click", () => sendCopilotPrompt(button.dataset.prompt));
+  });
+  $("copilot-auto-approve").addEventListener("change", () => saveCopilotSettings(false));
+  $("copilot-allow-destructive").addEventListener("change", () => saveCopilotSettings(false));
+}
+
+async function loadCopilot() {
+  if (!copilotWired) {
+    copilotWired = true;
+    renderCopilotTools();
+    wireCopilot();
+    const listen = window.__TAURI__?.event?.listen;
+    if (listen) {
+      await listen("ai-event", handleCopilotEvent);
+    }
+  }
+  await refreshCopilotStatus();
+}

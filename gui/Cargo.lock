@@ -4426,11 +4426,13 @@ dependencies = [
 name = "shikra-console"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "base64 0.22.1",
  "postgresql_embedded",
  "prost-types",
  "serde",
  "serde_json",
+ "shikra-ai",
  "shikra-client",
  "shikra-proto",
  "sqlx",

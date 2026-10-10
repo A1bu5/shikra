@@ -1,7 +1,9 @@
 //! Shikra Console — Tauri 2 backend.
 //!
 //! Thin command layer over `shikra-client`: session management, terminal,
-//! file browser, BOF/WASM extensions and tunnels.
+//! file browser, BOF/WASM extensions, tunnels and the AI copilot panel.
+
+mod ai;
 
 use serde::Serialize;
 use shikra_client::{ClientConfig, OperatorClient, TunnelManager};
@@ -1432,7 +1434,7 @@ fn scripts_delete(name: String) -> Result<(), String> {
     Ok(())
 }
 
-fn console_config_path() -> PathBuf {
+pub(crate) fn console_config_path() -> PathBuf {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
         .unwrap_or_else(|_| ".".into());
@@ -2016,6 +2018,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             app.manage(Arc::new(AppState::default()));
+            app.manage(Arc::new(ai::AiState::default()));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -2077,6 +2080,11 @@ fn main() {
             webhook_get,
             webhook_set,
             material_siblings,
+            ai::ai_status,
+            ai::ai_config_save,
+            ai::ai_send,
+            ai::ai_approve,
+            ai::ai_reset,
             publish_stage,
             listeners,
             listener_start,
