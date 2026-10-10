@@ -23,7 +23,7 @@ use tokio::sync::Mutex;
 
 const OP_ENROLL: u8 = 1;
 const OP_POLL: u8 = 2;
-const MAX_FRAME: usize = 8 * 1024 * 1024;
+const MAX_FRAME: usize = 32 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct QuicConfig {

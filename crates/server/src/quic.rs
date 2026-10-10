@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 pub const OP_ENROLL: u8 = 1;
 pub const OP_POLL: u8 = 2;
-pub const MAX_FRAME: usize = 8 * 1024 * 1024;
+pub const MAX_FRAME: usize = 32 * 1024 * 1024;
 
 /// Builds a QUIC server endpoint reusing the teamserver TLS material.
 pub fn server_endpoint(

@@ -242,7 +242,7 @@ pub async fn run_with_listeners(
         "shikra-server listening"
     );
 
-    const MAX_MESSAGE_SIZE: usize = 8 * 1024 * 1024;
+    const MAX_MESSAGE_SIZE: usize = 32 * 1024 * 1024;
     let server_result = Server::builder()
         .tls_config(tls)
         .context("failed to configure TLS")?

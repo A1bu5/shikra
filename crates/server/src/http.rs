@@ -1,6 +1,6 @@
 use crate::state::ServerState;
 use axum::body::Bytes;
-use axum::extract::State;
+use axum::extract::{DefaultBodyLimit, State};
 use axum::http::HeaderMap;
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -9,6 +9,11 @@ use prost::Message;
 use shikra_proto::v1::CheckInRequest;
 use shikra_transport::profile::{C2Profile, ProfileSet};
 use std::sync::Arc;
+
+/// Beacon poll bodies must carry full task results (for example multi-megabyte
+/// screenshots). Axum's 2 MiB default would reject them with 413 and, without
+/// the sequence-window fix, permanently desynchronize the session.
+pub const MAX_BEACON_BODY: usize = 32 * 1024 * 1024;
 
 #[derive(Clone)]
 pub struct HttpState {
@@ -56,6 +61,7 @@ pub fn router(
         .route("/api/v1/external/{session}/tasks", get(external_tasks))
         .route("/api/v1/external/{session}/results", post(external_results))
         .fallback(any(beacon_dispatch))
+        .layer(DefaultBodyLimit::max(MAX_BEACON_BODY))
         .with_state(state)
 }
 

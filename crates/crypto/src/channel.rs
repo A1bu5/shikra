@@ -2,6 +2,10 @@ use crate::aead::{random_nonce, AeadKey, NONCE_LEN};
 use crate::error::{CryptoError, Result};
 use crate::kdf::derive_key;
 
+/// How far the receiver may skip ahead of the next expected sequence. Covers
+/// lost or rejected requests while staying small enough to bound abuse.
+pub const MAX_SEQUENCE_GAP: u64 = 4096;
+
 /// One sealed frame: monotonic sequence, random nonce, AEAD ciphertext.
 #[derive(Debug, Clone)]
 pub struct SealedFrame {
@@ -77,12 +81,15 @@ impl SessionKeys {
         nonce: &[u8; NONCE_LEN],
         ciphertext: &[u8],
     ) -> Result<Vec<u8>> {
-        if sequence != self.recv_seq {
+        // Strict anti-replay: any sequence above the next expected one is
+        // only tolerated inside a bounded window, so a dropped request (a
+        // lost poll, an oversized body rejected by the server) heals on the
+        // following message instead of bricking the session.
+        if sequence < self.recv_seq || sequence - self.recv_seq > MAX_SEQUENCE_GAP {
             return Err(CryptoError::Replay);
         }
         let plaintext = self.recv_key.open(nonce, &self.aad(sequence), ciphertext)?;
-        self.recv_seq = self
-            .recv_seq
+        self.recv_seq = sequence
             .checked_add(1)
             .ok_or_else(|| CryptoError::Encrypt("sequence exhausted".into()))?;
         Ok(plaintext)
@@ -138,18 +145,43 @@ mod tests {
     }
 
     #[test]
-    fn out_of_order_is_rejected() {
+    fn dropped_frame_heals_within_window() {
         let (mut agent, mut server) = channel_pair("session-3");
         let first = agent.seal(b"one").expect("seal");
         let second = agent.seal(b"two").expect("seal");
 
+        // The first request was lost (e.g. rejected upstream); the next one
+        // must still be accepted and advance the receive sequence.
+        let plaintext = server
+            .open(second.sequence, &second.nonce, &second.ciphertext)
+            .expect("gap open");
+        assert_eq!(plaintext, b"two");
+
+        // The skipped frame is now a replay.
         assert!(matches!(
-            server.open(second.sequence, &second.nonce, &second.ciphertext),
+            server.open(first.sequence, &first.nonce, &first.ciphertext),
             Err(CryptoError::Replay)
         ));
+
+        // The following frame opens normally.
+        let third = agent.seal(b"three").expect("seal");
         server
-            .open(first.sequence, &first.nonce, &first.ciphertext)
+            .open(third.sequence, &third.nonce, &third.ciphertext)
             .expect("in-order open");
+    }
+
+    #[test]
+    fn gap_beyond_window_is_rejected() {
+        let (mut agent, mut server) = channel_pair("session-4");
+        let mut last = None;
+        for _ in 0..(MAX_SEQUENCE_GAP + 2) {
+            last = Some(agent.seal(b"x").expect("seal"));
+        }
+        let frame = last.expect("frame");
+        assert!(matches!(
+            server.open(frame.sequence, &frame.nonce, &frame.ciphertext),
+            Err(CryptoError::Replay)
+        ));
     }
 
     #[test]
