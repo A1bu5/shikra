@@ -1,8 +1,9 @@
-use crate::policy::ApprovalPolicy;
+use crate::policy::{risk_of, ApprovalPolicy, Risk};
 use crate::provider::{
     ChatMessage, Completion, CompletionProvider, Result, ToolCall, ToolDefinition,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub const DEFAULT_MAX_ITERATIONS: usize = 100;
@@ -52,14 +53,25 @@ pub struct ToolCallEvent {
     pub call_id: String,
     pub name: String,
     pub arguments: serde_json::Value,
+    pub risk: Risk,
     pub risk_description: String,
     pub approved: bool,
     pub result: Option<serde_json::Value>,
     pub error: Option<String>,
 }
 
+/// Async human-approval hook. Consulted for calls the policy does not
+/// auto-approve; returning `true` runs the call once.
+#[async_trait::async_trait]
+pub trait Approver: Send + Sync {
+    async fn approve(&self, call: &ToolCall, risk: Risk) -> bool;
+}
+
 /// Optional observer for tool call lifecycle events.
 pub trait ToolCallSink: Send + Sync {
+    /// Called when an approved call is about to execute.
+    fn on_tool_start(&self, _call: &ToolCall, _risk: Risk, _description: &str) {}
+
     fn on_tool_call(&self, event: &ToolCallEvent);
 }
 
@@ -70,11 +82,12 @@ impl ToolCallSink for NullSink {
     fn on_tool_call(&self, _event: &ToolCallEvent) {}
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AgenticLoop<P> {
     provider: P,
     max_iterations: usize,
     policy: ApprovalPolicy,
+    approver: Option<Arc<dyn Approver>>,
 }
 
 impl<P: CompletionProvider> AgenticLoop<P> {
@@ -83,6 +96,7 @@ impl<P: CompletionProvider> AgenticLoop<P> {
             provider,
             max_iterations: DEFAULT_MAX_ITERATIONS,
             policy: ApprovalPolicy::default(),
+            approver: None,
         }
     }
 
@@ -93,6 +107,13 @@ impl<P: CompletionProvider> AgenticLoop<P> {
 
     pub fn with_policy(mut self, policy: ApprovalPolicy) -> Self {
         self.policy = policy;
+        self
+    }
+
+    /// Installs an interactive approver for calls the policy does not
+    /// auto-approve (for example, a console panel with approve/deny buttons).
+    pub fn with_approver(mut self, approver: Arc<dyn Approver>) -> Self {
+        self.approver = Some(approver);
         self
     }
 
@@ -129,10 +150,19 @@ impl<P: CompletionProvider> AgenticLoop<P> {
             ));
 
             for call in &completion.tool_calls {
-                let approved = self.policy.evaluate(&call.name)?;
+                let risk = risk_of(&call.name);
+                let auto_approved = self.policy.evaluate(&call.name)?;
+                let approved = if auto_approved {
+                    true
+                } else if let Some(approver) = &self.approver {
+                    approver.approve(call, risk).await
+                } else {
+                    false
+                };
                 let risk_description = self.policy.describe(&call.name).to_string();
 
                 let (result, error) = if approved {
+                    sink.on_tool_start(call, risk, &risk_description);
                     match executor.call_tool(call).await {
                         Ok(value) => (Some(value), None),
                         Err(err) => (None, Some(err.to_string())),
@@ -151,6 +181,7 @@ impl<P: CompletionProvider> AgenticLoop<P> {
                     call_id: call.id.clone(),
                     name: call.name.clone(),
                     arguments: call.arguments.clone(),
+                    risk,
                     risk_description,
                     approved,
                     result: result.clone(),
@@ -324,6 +355,46 @@ mod tests {
             .expect("turn");
         let events = recorder.events.lock().expect("lock");
         assert!(events[0].approved);
+        assert!(events[0].result.is_some());
+    }
+
+    struct YesApprover;
+
+    #[async_trait::async_trait]
+    impl Approver for YesApprover {
+        async fn approve(&self, _call: &ToolCall, _risk: Risk) -> bool {
+            true
+        }
+    }
+
+    #[tokio::test]
+    async fn approver_grants_gated_call() {
+        let provider = ScriptedProvider {
+            completions: Mutex::new(vec![
+                Completion {
+                    content: None,
+                    tool_calls: vec![ToolCall {
+                        id: "c1".into(),
+                        name: "bof_run".into(),
+                        arguments: serde_json::json!({}),
+                    }],
+                },
+                Completion {
+                    content: Some("ok".into()),
+                    tool_calls: Vec::new(),
+                },
+            ]),
+        };
+        let loop_runner = AgenticLoop::new(provider).with_approver(Arc::new(YesApprover));
+        let mut messages = vec![ChatMessage::user("run bof")];
+        let recorder = Recorder::default();
+        loop_runner
+            .run_turn(&mut messages, &[], &EchoExecutor, &recorder)
+            .await
+            .expect("turn");
+        let events = recorder.events.lock().expect("lock");
+        assert!(events[0].approved);
+        assert_eq!(events[0].risk, Risk::Destructive);
         assert!(events[0].result.is_some());
     }
 }

@@ -837,7 +837,13 @@ async fn main() -> Result<()> {
                     Ok(shikra_proto::v1::TaskState::Dispatched) => "dispatched",
                     _ => "pending",
                 };
-                println!("{}\t{}\t{}\t{}", task.id, state, task.command, task.output);
+                // Tasks submitted by the AI copilot are tagged so operators
+                // can audit copilot activity at a glance.
+                let origin = if task.ai_initiated { "[ai]" } else { "----" };
+                println!(
+                    "{}\t{}\t{}\t{}\t{}",
+                    task.id, state, origin, task.command, task.output
+                );
             }
         }
         Command::TaskCancel { session, task } => {

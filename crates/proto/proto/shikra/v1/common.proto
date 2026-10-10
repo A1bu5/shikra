@@ -74,6 +74,8 @@ message TaskRequest {
   string command = 2;
   bytes args = 3;
   bytes payload = 4;
+  /// Set when the task was submitted by the built-in AI copilot.
+  bool ai_initiated = 5;
 }
 
 message TaskResult {

@@ -2,13 +2,14 @@ use crate::provider::AiError;
 use std::collections::HashSet;
 
 /// Risk tier assigned to every tool the model can call.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Risk {
     /// Read-only reconnaissance (list sessions, cat a file…).
     ReadOnly,
     /// Mutates remote state but is routine operator work (shell, upload).
     Mutating,
-    /// Destructive or infrastructure-level (BOF, WASM, tunnels).
+    /// Destructive or infrastructure-level (BOF, WASM, listeners, tunnels).
     Destructive,
 }
 
@@ -16,10 +17,13 @@ pub enum Risk {
 /// `Destructive` so a hallucinated tool can never bypass approval.
 pub fn risk_of(tool: &str) -> Risk {
     match tool {
-        "list_sessions" | "session_info" | "list_tasks" | "fs_ls" | "fs_cat" | "wasm_list" => {
-            Risk::ReadOnly
+        "list_sessions" | "session_info" | "list_tasks" | "list_listeners" | "list_pivots"
+        | "list_extensions" | "list_credentials" | "list_loot" | "fs_ls" | "fs_cat"
+        | "wasm_list" | "ps" | "netstat" | "ifconfig" | "env_dump" => Risk::ReadOnly,
+        "run_shell" | "run_task" | "fs_download" | "fs_upload" | "portscan" | "screenshot" => {
+            Risk::Mutating
         }
-        "run_shell" | "run_task" | "fs_download" | "fs_upload" => Risk::Mutating,
+        "listener_start" | "listener_stop" => Risk::Destructive,
         _ => Risk::Destructive,
     }
 }
@@ -104,6 +108,18 @@ mod tests {
     #[test]
     fn unknown_tool_is_destructive() {
         assert_eq!(risk_of("rm_rf_everything"), Risk::Destructive);
+    }
+
+    #[test]
+    fn expanded_surface_is_tiered() {
+        assert_eq!(risk_of("list_listeners"), Risk::ReadOnly);
+        assert_eq!(risk_of("list_pivots"), Risk::ReadOnly);
+        assert_eq!(risk_of("list_tasks"), Risk::ReadOnly);
+        assert_eq!(risk_of("ps"), Risk::ReadOnly);
+        assert_eq!(risk_of("portscan"), Risk::Mutating);
+        assert_eq!(risk_of("screenshot"), Risk::Mutating);
+        assert_eq!(risk_of("listener_start"), Risk::Destructive);
+        assert_eq!(risk_of("listener_stop"), Risk::Destructive);
     }
 
     #[test]

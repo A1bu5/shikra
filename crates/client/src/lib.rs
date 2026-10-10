@@ -17,7 +17,7 @@ pub use report::{generate_report, save_report};
 pub use tunnel::{run_portfwd, run_socks5, TunnelManager};
 
 pub const TRANSFER_CHUNK: usize = 1024 * 1024;
-const MAX_MESSAGE_SIZE: usize = 8 * 1024 * 1024;
+const MAX_MESSAGE_SIZE: usize = 32 * 1024 * 1024;
 
 #[derive(Clone)]
 pub struct BearerAuth {
@@ -620,11 +620,37 @@ impl OperatorClient {
         args: serde_json::Value,
         payload: Vec<u8>,
     ) -> Result<Vec<TaskResult>> {
+        self.submit_task_with_origin(session_id, command, args, payload, false)
+            .await
+    }
+
+    /// Like [`Self::submit_task`], but marks the task as AI-initiated so
+    /// operators can filter copilot activity in the task log.
+    pub async fn submit_task_ai(
+        &mut self,
+        session_id: &str,
+        command: &str,
+        args: serde_json::Value,
+        payload: Vec<u8>,
+    ) -> Result<Vec<TaskResult>> {
+        self.submit_task_with_origin(session_id, command, args, payload, true)
+            .await
+    }
+
+    async fn submit_task_with_origin(
+        &mut self,
+        session_id: &str,
+        command: &str,
+        args: serde_json::Value,
+        payload: Vec<u8>,
+        ai_initiated: bool,
+    ) -> Result<Vec<TaskResult>> {
         let request = TaskRequest {
             session_id: session_id.to_string(),
             command: command.to_string(),
             args: serde_json::to_vec(&args).unwrap_or_default(),
             payload,
+            ai_initiated,
         };
 
         let mut stream = self
@@ -639,6 +665,22 @@ impl OperatorClient {
             results.push(result);
         }
         Ok(results)
+    }
+
+    /// Like [`Self::run_task`], but marks the task as AI-initiated.
+    pub async fn run_task_ai(
+        &mut self,
+        session_id: &str,
+        command: &str,
+        args: serde_json::Value,
+    ) -> Result<TaskResult> {
+        let results = self
+            .submit_task_ai(session_id, command, args, Vec::new())
+            .await?;
+        results
+            .into_iter()
+            .next()
+            .context("teamserver returned no task result")
     }
 
     /// Convenience helper returning the single result for simple tasks.

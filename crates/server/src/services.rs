@@ -223,7 +223,7 @@ impl ControlPlane for ControlPlaneService {
             state: "dispatched".into(),
             exit_code: None,
             output: None,
-            ai_initiated: false,
+            ai_initiated: request.ai_initiated,
             approved_by: None,
             created_at: time::OffsetDateTime::now_utc(),
             dispatched_at: Some(time::OffsetDateTime::now_utc()),
