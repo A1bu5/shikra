@@ -4384,7 +4384,7 @@ dependencies = [
 
 [[package]]
 name = "shikra-ai"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "reqwest 0.12.28",
@@ -4400,7 +4400,7 @@ dependencies = [
 
 [[package]]
 name = "shikra-client"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4424,7 +4424,7 @@ dependencies = [
 
 [[package]]
 name = "shikra-console"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -4444,7 +4444,7 @@ dependencies = [
 
 [[package]]
 name = "shikra-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -4456,7 +4456,7 @@ dependencies = [
 
 [[package]]
 name = "shikra-crypto"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "argon2",
  "chacha20poly1305",
@@ -4472,7 +4472,7 @@ dependencies = [
 
 [[package]]
 name = "shikra-proto"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "prost",
  "prost-types",
@@ -4485,7 +4485,7 @@ dependencies = [
 
 [[package]]
 name = "shikra-transport"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "base32",

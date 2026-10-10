@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-10
+
 ### Added
 
 - **AI copilot console panel** — a visual agentic operator with streaming tool
@@ -83,5 +85,6 @@ Initial public release.
 - Beacon task results are kept encrypted in memory between polls.
 - Enrollment is rate limited per peer and authentication failures are audited.
 
-[Unreleased]: https://github.com/A1bu5/shikra/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/A1bu5/shikra/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/A1bu5/shikra/releases/tag/v0.1.1
 [0.1.0]: https://github.com/A1bu5/shikra/releases/tag/v0.1.0
